@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/aleksi/catkin_ws_project/devel/include/**",
+                "/opt/ros/kinetic/include/**",
+                "/home/aleksi/catkin_ws_project/src/turtlebot3_simulations/turtlebot3_fake/include/**",
+                "/home/aleksi/catkin_ws_project/src/turtlebot3_simulations/turtlebot3_gazebo/include/**",
+                "/home/aleksi/catkin_ws_project/src/turtlebot3/turtlebot3_slam/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
