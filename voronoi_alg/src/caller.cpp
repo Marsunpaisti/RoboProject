@@ -21,6 +21,8 @@
 #include <chrono>
 #include <random>
 #include <math.h>
+#include <string>
+#include <boost/bind.hpp>
 // SFML
 //#include <SFML/Graphics.hpp>
 // My includes
@@ -29,12 +31,23 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "voronoi_alg/RobotPos.h"
+#include "geometry_msgs/Twist.h"
 
 constexpr float WINDOW_WIDTH = 600.0f;
 constexpr float WINDOW_HEIGHT = 600.0f;
 constexpr float POINT_RADIUS = 0.005f;
 constexpr float OFFSET = 1.0f;
 
+
+std::vector<std::string> split_string_by_spaces(std::string inputstr){
+	std::stringstream tmpss(inputstr);
+	std::vector<std::string> out;
+	std::string tmps;
+	while (getline(tmpss, tmps, ' ')){
+		out.push_back(tmps);
+	}
+	return out;
+}
 
 void rotateWithMat(float ax, float ay, float costh, float sinth, float *outx, float *outy)
 {
@@ -238,7 +251,7 @@ void detectPolygon(VoronoiDiagram& diagram, std::vector<std::vector<std::vector<
     //std::cout << "Number of edges in latest polygon: " << cornerPoints.size() << '\n';
     if (is_counterclockwise(cornerPoints))
     {
-      std::cout << "current polygon is counterclockwise" << '\n';
+      //std::cout << "current polygon is counterclockwise" << '\n';
     } else {
       std::cout << "current polygon is clockwise" << '\n';
     }
@@ -250,8 +263,8 @@ void detectPolygon(VoronoiDiagram& diagram, std::vector<std::vector<std::vector<
     //if (polygonFound)
     //  break;
   }
-  std::cout << "number of polygons found: " << polysFound << '\n';
-  std::cout << "latest origin: x: " << origvec.at(0) << ", y: " << origvec.at(1) << '\n';
+  //std::cout << "number of polygons found: " << polysFound << '\n';
+  //std::cout << "latest origin: x: " << origvec.at(0) << ", y: " << origvec.at(1) << '\n';
   *polys = allPolys;
 }
 void countEdges(VoronoiDiagram& diagram)
@@ -286,7 +299,7 @@ void countEdges(VoronoiDiagram& diagram)
                 break;
         }
     }
-    std::cout << "edgenumber: " << edgenumber << std::endl;
+    //std::cout << "edgenumber: " << edgenumber << std::endl;
 }
 std::vector<std::vector<float>> vector2toFloats(std::vector<Vector2> points)
 {
@@ -325,18 +338,18 @@ VoronoiDiagram generateRandomDiagram(
     auto start = std::chrono::steady_clock::now();
     algorithm.construct();
     auto duration = std::chrono::steady_clock::now() - start;
-    std::cout << "construction: " <<
-		std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() <<
-		 "ms" << '\n';
+    //std::cout << "construction: " <<
+		//std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() <<
+		 //"ms" << '\n';
 
     // Bound the diagram
     start = std::chrono::steady_clock::now();
     algorithm.bound(Box{bottomLeftCorner.x-0.05, bottomLeftCorner.y-0.05,
 			topRightCorner.x+0.05, topRightCorner.y+0.05}); // Take the bounding box slightly bigger than the intersection box
     duration = std::chrono::steady_clock::now() - start;
-    std::cout << "bounding: " <<
-		std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() <<
-		 "ms" << '\n';
+    //std::cout << "bounding: " <<
+		//std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() <<
+		 //"ms" << '\n';
     VoronoiDiagram diagram = algorithm.getDiagram();
 
     // Intersect the diagram with a box
@@ -344,9 +357,9 @@ VoronoiDiagram generateRandomDiagram(
     bool valid = diagram.intersect(Box{bottomLeftCorner.x, bottomLeftCorner.y,
 			 topRightCorner.x, topRightCorner.y});
     duration = std::chrono::steady_clock::now() - start;
-    std::cout << "intersection: " <<
-		 std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() <<
-		  "ms" << '\n';
+    //std::cout << "intersection: " <<
+		 //std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() <<
+		  //"ms" << '\n';
     if (!valid)
         throw std::runtime_error("An error occured in the box intersection algorithm");
 
@@ -390,24 +403,141 @@ class Voronoicbc
 {
 public:
     Voronoicbc(const ros::NodeHandle& nh){
+      std::string nodenames;
+      bool retsucceeded = nh.getParam("robot_names_set", nodenames);
+      mnh = nh;
+  	  nodenameVec = split_string_by_spaces(nodenames);
+      for (size_t i = 0; i < nodenameVec.size(); i++) {
+        robodom_x.push_back(float(i)/10000);
+        robodom_y.push_back(float(i)/10000);
+      }
+      for (size_t i = 0; i < nodenameVec.size(); i++) {
+        //robodom_subs.push_back(mnh.subscribe(nodenameVec.at(i)+"/odom", 1,
+         //&boost::bind(Voronoicbc::robNameVecCb, _1, i), this));
+        robodom_subs.push_back(mnh.subscribe(nodenameVec.at(i)+"/odom", 1,
+         &Voronoicbc::robNameVecCb, this));
+
+        robcont_pubs.push_back(mnh.advertise<geometry_msgs::Twist>(
+          nodenameVec.at(i)+"/controller_target", 1000));
+      }
 			botLX=-1;botLY=-1;topRX=1;topRY=1;
 			target_region_x = {-1,-1,1,1};
 			target_region_y = {-1,1,1,-1};
-        mnh = nh;
-        targloc_pub = mnh.advertise<voronoi_alg::RobotPos>("target_locs", 1000);
-        targloc_sub = mnh.subscribe("robot_locs", 1000, &Voronoicbc::robPosVecCb, this);
-				targreg_sub = mnh.subscribe("target_region", 1000, &Voronoicbc::robRegVecCb, this);
-        ros::spin();
+      //targloc_pub = mnh.advertise<voronoi_alg::RobotPos>("target_locs", 1000);
+      //targloc_sub = mnh.subscribe("robot_locs", 1000, &Voronoicbc::robPosVecCb, this);
+			targreg_sub = mnh.subscribe("target_region", 1000, &Voronoicbc::robRegVecCb, this);
+      ros::spin();
     };
 private:
 	void robRegVecCb(const voronoi_alg::RobotPos::ConstPtr& msg){
 		//botLX=msg->x.at(0);botLY=msg->y.at(0);topRX=msg->x.at(1);topRY=msg->y.at(1);
+    //std::cout << "robRegVecCb called" << '\n';
 		target_region_x = msg->x;
 		target_region_y = msg->y;
 		//eli tässä funktiossa callback, ja robojen paikat vaan luetaan jostain... kait?
 		//jos nyt toistaseks muokkais vaan tota robPosVecCb:tä.
 		//rowVecToColVec
 	}
+  //void robNameVecCb(const geometry_msgs::Twist::ConstPtr& msg, int nodeNum){
+  void robNameVecCb(const ros::MessageEvent<geometry_msgs::Twist const>& event){
+    //std::cout << "robNameVecCb called" << '\n';
+    int nodeNum;
+    const ros::M_string& header = event.getConnectionHeader();
+    const geometry_msgs::Twist::ConstPtr& msg = event.getMessage();
+    std::string curr_node_name = header.at("topic");
+    for (size_t i = 0; i < nodenameVec.size(); i++) {
+      if (curr_node_name.compare("/"+nodenameVec.at(i)+"/odom")==0) {
+        nodeNum = i;
+      }
+    }
+    //std::cout << "node name read" << '\n';
+    //std::cout << "node name: "<< curr_node_name << '\n';
+    //std::cout << "node index: " << nodeNum << '\n';
+
+    std::vector<std::vector<float>> posIn, posOut,
+      targetAsRowVec{target_region_x,target_region_y};
+    //std::cout << "about to write odometry data:" << '\n';
+    //std::cout << "length of robodom_x: " << robodom_x.size() << '\n';
+    robodom_x.at(nodeNum) = msg->linear.x;
+    robodom_y.at(nodeNum) = msg->linear.y;
+    //std::cout << "odometry data written" << '\n';
+    posIn.push_back(robodom_x);
+    posIn.push_back(robodom_y);
+    std::vector<std::vector<float>> targetAsColVec = rowVecToColVec(targetAsRowVec);
+    float costh, sinth;
+    cornersToRotangles(targetAsColVec, &costh, &sinth);
+    //std::vector<std::vector<float>>
+    float xmin, xmax, ymin, ymax;
+    std::vector<std::vector<float>> generatedPoints =
+      transformRobLocsAndCorners(targetAsColVec, rowVecToColVec(posIn),
+      &xmin, &xmax, &ymin, &ymax);
+
+    //std::size_t nbPoints = 2;
+    std::vector<std::vector<float>> centroids;
+    // Generate points
+    //std::vector<Vector2> points = generatePoints(nbPoints);
+    Vector2 bottomLeftCorner, topRightCorner;
+    //bottomLeftCorner.x=botLX;bottomLeftCorner.y=botLY;
+    //topRightCorner.x=topRX;topRightCorner.y=topRY;
+    bottomLeftCorner.x=xmin;bottomLeftCorner.y=ymin;
+    topRightCorner.x=xmax;topRightCorner.y=ymax;
+    // Write generated points to generatedPoints:
+    //std::vector<std::vector<float>> generatedPoints = colVecToRowVec(posIn);//vector2toFloats(points);
+
+    VoronoiDiagram diagram = generateRandomDiagram(&generatedPoints,
+      bottomLeftCorner, topRightCorner);
+
+    std::vector<std::vector<std::vector<float>>> polygons;
+
+    //count the edges:
+    countEdges(diagram);
+    //detect the polygons:
+    detectPolygon(diagram, &polygons);
+    //detect the point centers:
+    findAllCentroids(polygons, &centroids);
+    //std::cout << "number of centroids: " << centroids.size() << '\n';
+    //posOut = rowVecToColVec(centroids);
+    posOut = centroids;
+    //std::cout << "posOut, dim 1: " << posOut.size() << '\n';
+    //std::cout << "posOut, dim 2: " << posOut.at(0).size() << '\n';
+    posOut = transformTargetLocs(posOut, targetAsColVec);
+    //print result:
+    //printPointsWithCentroids(generatedPoints,centroids);
+
+      /*std::string xcoord_as_str = std::to_string(msg->x.at(0));
+      ROS_INFO("I heard: [%s]", xcoord_as_str.c_str());
+      if (targ_x.size()==1){
+          targ_x.at(0)+=msg->x.at(0);
+          targ_y.at(0)+=msg->y.at(0);
+      } else {
+          targ_x.push_back(0);targ_y.push_back(0);
+      }*/
+      //voronoi_alg::RobotPos reply;
+      geometry_msgs::Twist reply;
+      //reply.x = targ_x;reply.y = targ_y;
+      //std::cout << "number of polygons: " << polygons.size() << '\n';
+      //std::cout << "posOut, dim 1: " << posOut.size() << '\n';
+      //std::cout << "posOut, dim 2: " << posOut.at(0).size() << '\n';
+      /*std::cout << "x- positions: ";
+      for (size_t i = 0; i < posOut.size(); i++) {
+        std::cout << posOut.at(i).at(0) << " ";
+      }
+      std::cout << '\n';*/
+      for (size_t i = 0; i < posOut.at(0).size(); i++) {
+        reply.linear.x = posOut.at(0).at(i);
+        reply.linear.y = posOut.at(1).at(i);
+        robcont_pubs.at(i).publish(reply);
+      }
+
+      //reply.x = posOut.at(0);reply.y = posOut.at(1);
+      //targloc_pub.publish(reply);
+      //std::string xcoord_as_str = std::to_string(reply.x.at(0));
+      //ROS_INFO("First target x: [%s]", xcoord_as_str.c_str());
+      //std::string ycoord_as_str = std::to_string(reply.y.at(0));
+      //ROS_INFO("First target y: [%s]", ycoord_as_str.c_str());
+      //std::string botlx_as_str = std::to_string(botLX);
+      //ROS_INFO("Bottom left x: [%s]", botlx_as_str.c_str());
+  }
     void robPosVecCb(const voronoi_alg::RobotPos::ConstPtr& msg){
 			std::vector<std::vector<float>> posIn, posOut,
 				targetAsRowVec{target_region_x,target_region_y};
@@ -470,10 +600,13 @@ private:
 				ROS_INFO("Bottom left x: [%s]", botlx_as_str.c_str());
     };
     float recXcoord = 0, botLX, botLY, topRX, topRY;
-		std::vector<float> target_region_x, target_region_y;
+		std::vector<float> target_region_x, target_region_y, robodom_x, robodom_y;
     ros::Publisher targloc_pub;
+    std::vector<ros::Publisher> robcont_pubs;
     ros::Subscriber targloc_sub, targreg_sub;
+    std::vector<ros::Subscriber> robodom_subs;
     ros::NodeHandle mnh;
+    std::vector<std::string> nodenameVec;
     //std::vector<float> targ_x;
     //std::vector<float> targ_y;
 };

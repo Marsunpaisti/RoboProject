@@ -221,3 +221,5 @@ add_executable(voronoiCaller src/Beachline.cpp src/Box.cpp src/caller.cpp src/Ev
 target_link_libraries(voronoiCaller ${catkin_LIBRARIES})
 add_executable(regionMaker src/regionMaker.cpp)
 target_link_libraries(regionMaker ${catkin_LIBRARIES})
+add_executable(multinodegen src/multinodegen.cpp)
+target_link_libraries(multinodegen ${catkin_LIBRARIES})
