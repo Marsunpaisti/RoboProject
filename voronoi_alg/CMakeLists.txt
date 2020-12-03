@@ -224,7 +224,10 @@ target_link_libraries(regionMaker ${catkin_LIBRARIES})
 add_executable(multinodegen src/multinodegen.cpp)
 target_link_libraries(multinodegen ${catkin_LIBRARIES})
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 01b79a34655636904fb5cbba160341e4000179af
 add_dependencies(talker voronoi_alg_generate_messages_cpp)
 add_dependencies(listener voronoi_alg_generate_messages_cpp)
 add_dependencies(voronoiCaller voronoi_alg_generate_messages_cpp)
