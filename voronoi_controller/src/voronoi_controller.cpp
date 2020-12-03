@@ -1,6 +1,7 @@
 #include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Twist.h"
 #include "nav_msgs/Odometry.h"
+#include "pidcontroller.h"
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "vector"
@@ -26,6 +27,8 @@ public:
     Controller(std::string robotName);
     void loop();
     void stop();
+    PIDController angleController = PIDController(1.0 / 50.0, -0.65, 0.65, 1, -0.1, 0, true);
+    PIDController distanceController = PIDController(1.0 / 50.0, 0, 0.6, -1.3, 0.1, 0, false);
 };
 
 void Controller::stop()
@@ -41,35 +44,47 @@ void Controller::loop()
             ": canceling loop. No odometry received yet");
         return;
     };
+
+    // TODO Remove hardcoded target
     haveTargetPose = true;
-    targetPose.x = 0;
-    targetPose.y = 0;
+    targetPose.x = 4;
+    targetPose.y = -1;
     if (!haveTargetPose) {
         ROS_INFO("%s %s", robotName.c_str(),
             ": canceling loop. No target pose received yet");
         return;
     };
 
-    double dx = targetPose.x - currentPose.x;
+    double dx
+        = targetPose.x - currentPose.x;
     double dy = targetPose.y - currentPose.y;
     double angleToTarget = atan2(dy, dx); // Returns -pi < ang < pi
     double angleDifference = angleToTarget - currentPose.theta;
     double distanceToTarget = sqrt(dx * dx + dy * dy);
+    if (angleDifference > 3.1415926535) {
+        angleDifference -= 3.1415926535 * 2;
+    } else if (angleDifference < -3.1415926535) {
+        angleDifference += 3.1415926535 * 2;
+    }
+
+    double angleSteer = 0;
+    double linearSteer = 0;
+    if (distanceToTarget > 0.05) {
+        angleSteer = angleController.calculate(angleToTarget, currentPose.theta);
+    } else { // Align self to target theta once we are at target location
+        angleSteer = angleController.calculate(targetPose.theta, currentPose.theta);
+    }
+    if (distanceToTarget > 0.05 && fabs(angleDifference) < (10 * (3.14159 / 180))) { // Only run angle controller if we are roughly facing target
+        linearSteer = distanceController.calculate(0, distanceToTarget);
+    }
+
+    /*
     ROS_INFO("COORDS TARGET: X: %f Y: %f, OURS: X: %f Y: %f", targetPose.x, targetPose.y, currentPose.x, currentPose.y);
     ROS_INFO("ANGLES TARGET: %f, OUR: %f, DIFFERENCE: %f", angleToTarget, currentPose.theta, angleDifference);
+    */
     geometry_msgs::Twist outputTwist;
-
-    if (fabs(angleDifference) > 0.005) {
-        if (angleDifference > 0) {
-            outputTwist.angular.z = 0.15;
-        } else {
-            outputTwist.angular.z = -0.15;
-        }
-    }
-    if (distanceToTarget > 0.05 && fabs(angleDifference) < 0.015) {
-        outputTwist.linear.x = 0.5;
-    }
-
+    outputTwist.angular.z = angleSteer;
+    outputTwist.linear.x = linearSteer;
     ROS_INFO("OUTPUT: LINEAR X: %f Y:%f Z: %f, ANGULAR: X: %f, Y: %f, Z: %f", outputTwist.linear.x, outputTwist.linear.y, outputTwist.linear.z, outputTwist.angular.x, outputTwist.angular.y, outputTwist.angular.z);
     outputPublisher.publish(outputTwist);
 }
@@ -103,7 +118,6 @@ void Controller::inputOdometryCb(const nav_msgs::Odometry::ConstPtr pOdometryMsg
 Controller::Controller(std::string robotName)
     : robotName(robotName)
 {
-
     ros::NodeHandle nh;
     currentPose.x = 1;
     currentPose.y = 2;
