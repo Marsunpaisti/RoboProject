@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 // %EndTag(FILL_MESSAGE)%
 
 // %Tag(ROSCONSOLE)%
-    ROS_INFO("%s", msg.data.c_str());
+    //ROS_INFO("%s", msg.data.c_str());
     //std::string mystr = std::to_string(msg2.x.at(0))
     //ROS_INFO("%s", );
 // %EndTag(ROSCONSOLE)%
