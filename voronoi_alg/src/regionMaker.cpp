@@ -30,7 +30,9 @@
 // %EndTag(ROS_HEADER)%
 // %Tag(MSG_HEADER)%
 #include "std_msgs/String.h"
-#include "voronoi_alg/RobotPos.h"
+//#include "voronoi_alg/RobotPos.h"
+#include "geometry_msgs/Polygon.h"
+#include "geometry_msgs/Point32.h"
 // %EndTag(MSG_HEADER)%
 
 #include <sstream>
@@ -54,7 +56,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "region_pub");
   ros::NodeHandle n;
   //ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
-  ros::Publisher region_pub = n.advertise<voronoi_alg::RobotPos>("target_region", 1000);
+  //ros::Publisher region_pub = n.advertise<voronoi_alg::RobotPos>("target_region", 1000);
+  ros::Publisher region_pub = n.advertise<geometry_msgs::Polygon>("target_region", 1000);
 // %EndTag(PUBLISHER)%
 
 // %Tag(LOOP_RATE)%
@@ -74,15 +77,31 @@ int main(int argc, char **argv)
      * This is a message object. You stuff it with data, and then publish it.
      */
 // %Tag(FILL_MESSAGE)%
-    voronoi_alg::RobotPos msg2;
-    std::vector<float> x, y;
+    //voronoi_alg::RobotPos msg2;
+    geometry_msgs::Polygon msg2;
+    std::vector<geometry_msgs::Point32> points;
+    geometry_msgs::Point32 point;
+    point.x = -2; point.y=-2;
+    points.push_back(point);
+    point.x = 5; point.y=8;
+    points.push_back(point);
+    point.x = 15; point.y=1;
+    points.push_back(point);
+    point.x = 8; point.y=-9;
+    points.push_back(point);
+    msg2.points = points;
+
+    /*std::vector<float> x, y;
     x.push_back(-2);y.push_back(-2);
     x.push_back(5);y.push_back(8);
     //points are a, b, c and d. Third point must be b + (ay-by, bx-ax)*k
     x.push_back(15);y.push_back(1);
     //fourth point doesn't really matter, but for a rectangle it should be c+a-b
     x.push_back(8);y.push_back(-9);
-    msg2.x=x;msg2.y=y;
+    msg2.x=x;msg2.y=y;*/
+
+
+
     //std_msgs::String msg;
 
     //std::stringstream ss;
@@ -105,6 +124,7 @@ int main(int argc, char **argv)
 // %Tag(PUBLISH)%
     //chatter_pub.publish(msg);
     region_pub.publish(msg2);
+    //region_pub.publish(points);
 // %EndTag(PUBLISH)%
 
 // %Tag(SPINONCE)%

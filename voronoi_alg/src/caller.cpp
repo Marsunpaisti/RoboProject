@@ -30,8 +30,9 @@
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "voronoi_alg/RobotPos.h"
+//#include "voronoi_alg/RobotPos.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Polygon.h"
 
 constexpr float WINDOW_WIDTH = 600.0f;
 constexpr float WINDOW_HEIGHT = 600.0f;
@@ -429,11 +430,19 @@ public:
       ros::spin();
     };
 private:
-	void robRegVecCb(const voronoi_alg::RobotPos::ConstPtr& msg){
+	//void robRegVecCb(const voronoi_alg::RobotPos::ConstPtr& msg){
+	void robRegVecCb(const geometry_msgs::Polygon::ConstPtr& msg){
 		//botLX=msg->x.at(0);botLY=msg->y.at(0);topRX=msg->x.at(1);topRY=msg->y.at(1);
     //std::cout << "robRegVecCb called" << '\n';
-		target_region_x = msg->x;
-		target_region_y = msg->y;
+		std::vector<float> xvals, yvals;
+		for (size_t i = 0; i < 4; i++) {
+			xvals.push_back(msg->points[i].x);
+			yvals.push_back(msg->points[i].y);
+		}
+		//target_region_x = msg->x;
+		//target_region_y = msg->y;
+		target_region_x = xvals;
+		target_region_y = yvals;
 		//eli tässä funktiossa callback, ja robojen paikat vaan luetaan jostain... kait?
 		//jos nyt toistaseks muokkais vaan tota robPosVecCb:tä.
 		//rowVecToColVec
@@ -538,7 +547,7 @@ private:
       //std::string botlx_as_str = std::to_string(botLX);
       //ROS_INFO("Bottom left x: [%s]", botlx_as_str.c_str());
   }
-    void robPosVecCb(const voronoi_alg::RobotPos::ConstPtr& msg){
+  /*  void robPosVecCb(const voronoi_alg::RobotPos::ConstPtr& msg){
 			std::vector<std::vector<float>> posIn, posOut,
 				targetAsRowVec{target_region_x,target_region_y};
 			posIn.push_back(msg->x);
@@ -588,7 +597,7 @@ private:
         } else {
             targ_x.push_back(0);targ_y.push_back(0);
         }*/
-        voronoi_alg::RobotPos reply;
+        /*voronoi_alg::RobotPos reply;
         //reply.x = targ_x;reply.y = targ_y;
 				reply.x = posOut.at(0);reply.y = posOut.at(1);
         targloc_pub.publish(reply);
@@ -598,7 +607,7 @@ private:
 				ROS_INFO("First target y: [%s]", ycoord_as_str.c_str());
 				std::string botlx_as_str = std::to_string(botLX);
 				ROS_INFO("Bottom left x: [%s]", botlx_as_str.c_str());
-    };
+    };*/
     float recXcoord = 0, botLX, botLY, topRX, topRY;
 		std::vector<float> target_region_x, target_region_y, robodom_x, robodom_y;
     ros::Publisher targloc_pub;
