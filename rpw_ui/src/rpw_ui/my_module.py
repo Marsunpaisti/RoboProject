@@ -46,9 +46,9 @@ class MyPlugin(Plugin):
         self._widget.start_button.clicked.connect(self.start_button_clicked)
 
         # Publisher
-        self.pub = rospy.Publisher(self, 'ROI_points', String , queue_size=10)
+        self.pub = rospy.Publisher('ROI_points', String , queue_size=10)
         self.rate = rospy.Rate(10)
-        rospy.init_node('position')
+
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
