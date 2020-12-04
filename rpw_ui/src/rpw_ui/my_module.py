@@ -67,10 +67,11 @@ class MyPlugin(Plugin):
         print(pos)
 
         self.pub.publish("asd")
-        self.rate.sleep()
+        # self.rate.sleep()
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here
+        rospy.loginfo("Stopping..")
         self.pub.unregister()
         self.timer.stop()
         pass
