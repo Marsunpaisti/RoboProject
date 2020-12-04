@@ -3,6 +3,7 @@ import rospy
 import rospkg
 
 from geometry_msgs.msg import Polygon
+from geometry_msgs.msg import Point32
 from std_msgs.msg import String
 
 from qt_gui.plugin import Plugin
@@ -46,7 +47,7 @@ class MyPlugin(Plugin):
         self._widget.start_button.clicked.connect(self.start_button_clicked)
 
         # Publisher
-        self.pub = rospy.Publisher('ROI_points', String , queue_size=10)
+        self.pub = rospy.Publisher('ROI_points', Polygon , queue_size=10)
         self.rate = rospy.Rate(10)
 
 
@@ -66,8 +67,12 @@ class MyPlugin(Plugin):
         self._widget.position_edit.setText(str(pos[0]) + ", " + str(pos[1]))
         print(pos)
 
-        self.pub.publish("asd")
-        # self.rate.sleep()
+        roi_points = Polygon()
+        roi_points.points.append(Point32(1.0, 1.0, 0.0))
+        roi_points.points.append(Point32(2.0, 2.0, 0.0))
+        roi_points.points.append(Point32(3.0, 3.0, 0.0))
+        self.pub.publish(roi_points)
+
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here
