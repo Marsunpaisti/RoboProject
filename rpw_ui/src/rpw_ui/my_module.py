@@ -3,6 +3,7 @@ import rospy
 import rospkg
 
 from geometry_msgs.msg import Polygon
+from std_msgs.msg import String
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
@@ -45,7 +46,9 @@ class MyPlugin(Plugin):
         self._widget.start_button.clicked.connect(self.start_button_clicked)
 
         # Publisher
-        self.pub = rospy.Publisher('ROI_points', Polygon, queue_size=10)
+        self.pub = rospy.Publisher(self, 'ROI_points', String , queue_size=10)
+        self.rate = rospy.Rate(10)
+        rospy.init_node('position')
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -62,6 +65,9 @@ class MyPlugin(Plugin):
         pos = ( self.roi.pos().x(), self.roi.pos().y() )
         self._widget.position_edit.setText(str(pos[0]) + ", " + str(pos[1]))
         print(pos)
+
+        self.pub.publish("asd")
+        self.rate.sleep()
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here
