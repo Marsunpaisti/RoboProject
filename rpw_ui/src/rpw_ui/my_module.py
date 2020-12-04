@@ -2,6 +2,8 @@ import os
 import rospy
 import rospkg
 
+from geometry_msgs.msg import Polygon
+
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
@@ -27,20 +29,23 @@ class MyPlugin(Plugin):
         # Give QObjects reasonable names
         self._widget.setObjectName('MyPluginUi')
 
-        # self._widget.exit_button.clicked.connect(Plugin.close)
-
-        # Add widget to the user interface
+        # Add .ui file's widget to the user interface
         context.add_widget(self._widget)
 
+        # Add scene, view, ROI rectangle
         scene = QGraphicsScene(0,0,1000,500)
         self.roi = scene.addRect(0,0,200,200, QPen(Qt.black), QBrush(Qt.gray))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
         view = QGraphicsView(scene)
         context.add_widget(view)
 
+        # Publisher timer and start / stop button
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_roi_position)
         self._widget.start_button.clicked.connect(self.start_button_clicked)
+
+        # Publisher
+        self.pub = rospy.Publisher('ROI_points', Polygon, queue_size=10)
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -60,6 +65,8 @@ class MyPlugin(Plugin):
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here
+        self.pub.unregister()
+        self.timer.stop()
         pass
 
     def save_settings(self, plugin_settings, instance_settings):
