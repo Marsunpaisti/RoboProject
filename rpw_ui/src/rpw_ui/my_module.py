@@ -9,7 +9,7 @@ from std_msgs.msg import String
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
-from PyQt5 import QtGui
+from PyQt5 import Qt, QtGui
 from PyQt5.QtCore import  Qt, QTimer
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem
@@ -49,6 +49,7 @@ class MyPlugin(Plugin):
         self.timer.timeout.connect(self.update_roi_position)
         self._widget.start_button.clicked.connect(self.start_button_clicked)
         self._widget.reset_button.clicked.connect(self.reset_button_clicked)
+
 
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
@@ -93,10 +94,11 @@ class MyPlugin(Plugin):
 
         self.pub.publish(roi_points)
 
+
+
     def reset_button_clicked(self):
 
         self.roi.setPos(0,0)
-        rospy.loginfo("Reset vlivked")
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here
