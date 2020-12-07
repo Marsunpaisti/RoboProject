@@ -66,28 +66,30 @@ class MyPlugin(Plugin):
             self.timer.start(interval)
 
     def update_roi_position(self):
+        # Get widget's position
         x = float(self.roi.pos().x())
         y = float(self.roi.pos().y())
+        # Update GUI's position indicator
         str_pos = str(x) + ", " + str(y)
         self._widget.position_edit.setText(str_pos)
         # print(str_pos)
 
-        z = 0.0
+        # Calculate corner points
         roi_points = Polygon()
-        div = 200
-        x1 = x - (float(self.roi_widht) / div)
-        y1 = y + (float(self.roi_widht) / div)
-        x2 = x + (float(self.roi_widht) / div)
-        y2 = y + (float(self.roi_widht) / div)
-        x3 = x + (float(self.roi_widht) / div)
-        y3 = y - (float(self.roi_widht) / div)
-        x4 = x - (float(self.roi_widht) / div)
-        y4 = y - (float(self.roi_widht) / div)
-        print(x1, y1)
-        roi_points.points.append(Point32(x1, y1, z))
-        roi_points.points.append(Point32(x2, y2, z))
-        roi_points.points.append(Point32(x3, y3, z))
-        roi_points.points.append(Point32(x4, y4, z))
+        half_width = float(self.roi_widht) / 2
+        half_height = float(self.roi_height) / 2
+        scale = 1000
+        # _l, _r = left / right; _u, _d = up / down
+        x_l = (x - half_width) / scale
+        y_u = (y + half_height) / scale
+        x_r = (x + half_width) / scale
+        y_d = (y - half_height) / scale
+        rospy.loginfo("Sending to topic")
+        z = 0.0
+        roi_points.points.append(Point32(x_l, y_u, z))
+        roi_points.points.append(Point32(x_r, y_u, z))
+        roi_points.points.append(Point32(x_r, y_d, z))
+        roi_points.points.append(Point32(x_l, y_d, z))
 
         self.pub.publish(roi_points)
 
@@ -102,18 +104,3 @@ class MyPlugin(Plugin):
         self.pub.unregister()
         self.timer.stop()
         pass
-
-    def save_settings(self, plugin_settings, instance_settings):
-        # TODO save intrinsic configuration, usually using:
-        # instance_settings.set_value(k, v)
-        pass
-
-    def restore_settings(self, plugin_settings, instance_settings):
-        # TODO restore intrinsic configuration, usually using:
-        # v = instance_settings.value(k)
-        pass
-
-    #def trigger_configuration(self):
-        # Comment in to signal that the plugin has a way to configure
-        # This will enable a setting button (gear icon) in each dock widget title bar
-        # Usually used to open a modal configuration dialog
