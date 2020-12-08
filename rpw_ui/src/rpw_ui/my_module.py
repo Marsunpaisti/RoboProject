@@ -79,7 +79,7 @@ class MyPlugin(Plugin):
         roi_points = Polygon()
         half_width = float(self.roi_widht) / 2
         half_height = float(self.roi_height) / 2
-        scale = 1000
+        scale = 100
         # _l, _r = left / right; _u, _d = up / down
         x_l = (x - half_width) / scale
         y_u = (y + half_height) / scale
