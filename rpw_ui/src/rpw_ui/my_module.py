@@ -5,7 +5,6 @@ from robot import Robot
 
 from geometry_msgs.msg import Polygon
 from geometry_msgs.msg import Point32
-from std_msgs.msg import String
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
@@ -110,8 +109,10 @@ class MyPlugin(Plugin):
         self.roi.setPos(0,0)
 
     def shutdown_plugin(self):
-        # TODO unregister all publishers here
         rospy.loginfo("Exiting..")
         self.pub.unregister()
         self.timer.stop()
-        pass
+        # Unsubscribe robots listening odom
+        for robot in self.robots:
+            robot.unsubscribe()
+
