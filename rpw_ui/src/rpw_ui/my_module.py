@@ -55,6 +55,12 @@ class MyPlugin(Plugin):
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
         self.rate = rospy.Rate(10)
 
+        # Get robot parameters
+        if rospy.has_param('robot_names_set'):
+            param_str = rospy.get_param('robot_names_set')
+            params = param_str.split()
+            rospy.loginfo("Robot parameters: " + str(params))
+
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
