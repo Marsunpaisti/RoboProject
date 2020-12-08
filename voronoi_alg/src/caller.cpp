@@ -32,6 +32,7 @@
 #include "std_msgs/String.h"
 //#include "voronoi_alg/RobotPos.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Polygon.h"
 
 constexpr float WINDOW_WIDTH = 600.0f;

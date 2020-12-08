@@ -213,10 +213,6 @@ include_directories(
 # catkin_add_nosetests(test)
 
 
-add_executable(talker src/talker.cpp)
-target_link_libraries(talker ${catkin_LIBRARIES})
-add_executable(listener src/listener.cpp)
-target_link_libraries(listener ${catkin_LIBRARIES})
 add_executable(voronoiCaller src/Beachline.cpp src/Box.cpp src/caller.cpp src/Event.cpp src/FortuneAlgorithm.cpp src/Vector2.cpp src/VoronoiDiagram.cpp src/Arc.h src/Beachline.h src/Box.h src/Event.h src/FortuneAlgorithm.h src/PriorityQueue.h src/Vector2.h src/VoronoiDiagram.h)
 target_link_libraries(voronoiCaller ${catkin_LIBRARIES})
 add_executable(regionMaker src/regionMaker.cpp)
@@ -224,8 +220,6 @@ target_link_libraries(regionMaker ${catkin_LIBRARIES})
 add_executable(multinodegen src/multinodegen.cpp)
 target_link_libraries(multinodegen ${catkin_LIBRARIES})
 
-add_dependencies(talker voronoi_alg_generate_messages_cpp)
-add_dependencies(listener voronoi_alg_generate_messages_cpp)
 add_dependencies(voronoiCaller voronoi_alg_generate_messages_cpp)
 add_dependencies(regionMaker voronoi_alg_generate_messages_cpp)
 add_dependencies(multinodegen voronoi_alg_generate_messages_cpp)
