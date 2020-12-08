@@ -1,6 +1,7 @@
 import os
 import rospy
 import rospkg
+from robot import Robot
 
 from geometry_msgs.msg import Polygon
 from geometry_msgs.msg import Point32
@@ -61,6 +62,9 @@ class MyPlugin(Plugin):
             params = param_str.split()
             rospy.loginfo("Robot parameters: " + str(params))
 
+        self.robots = []
+        for param in params:
+            self.robots.append( Robot(param) )
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
