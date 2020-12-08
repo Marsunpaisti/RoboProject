@@ -422,8 +422,8 @@ public:
           nodenameVec.at(i)+"/controller_target", 1000));
       }
 			botLX=-1;botLY=-1;topRX=1;topRY=1;
-			target_region_x = {-1,-1,1,1};
-			target_region_y = {-1,1,1,-1};
+			target_region_x = {-10,-10,10,10};
+			target_region_y = {-10,10,10,-10};
       //targloc_pub = mnh.advertise<voronoi_alg::RobotPos>("target_locs", 1000);
       //targloc_sub = mnh.subscribe("robot_locs", 1000, &Voronoicbc::robPosVecCb, this);
 			targreg_sub = mnh.subscribe("target_region", 1000, &Voronoicbc::robRegVecCb, this);
