@@ -54,7 +54,6 @@ class MyPlugin(Plugin):
 
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
-        self.rate = rospy.Rate(10)
 
         # Get robot parameters
         if rospy.has_param('robot_names_set'):
