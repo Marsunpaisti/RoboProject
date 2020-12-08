@@ -50,7 +50,7 @@ class MyPlugin(Plugin):
         self._widget.start_button.clicked.connect(self.start_button_clicked)
         self._widget.reset_button.clicked.connect(self.reset_button_clicked)
 
-
+        
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
 
