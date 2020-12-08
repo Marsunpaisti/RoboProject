@@ -63,8 +63,8 @@ class MyPlugin(Plugin):
             rospy.loginfo("Robot parameters: " + str(params))
 
         self.robots = []
-        for param in params:
-            self.robots.append( Robot(param) )
+        for robot_id in params:
+            self.robots.append( Robot(robot_id) )
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
