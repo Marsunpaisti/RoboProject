@@ -418,7 +418,8 @@ public:
         robodom_subs.push_back(mnh.subscribe(nodenameVec.at(i)+"/odom", 1,
          &Voronoicbc::robNameVecCb, this));
 
-        robcont_pubs.push_back(mnh.advertise<geometry_msgs::Twist>(
+        //robcont_pubs.push_back(mnh.advertise<geometry_msgs::Twist>(
+				robcont_pubs.push_back(mnh.advertise<geometry_msgs::Pose2D>(
           nodenameVec.at(i)+"/controller_target", 1000));
       }
 			botLX=-1;botLY=-1;topRX=1;topRY=1;
@@ -522,7 +523,8 @@ private:
           targ_x.push_back(0);targ_y.push_back(0);
       }*/
       //voronoi_alg::RobotPos reply;
-      geometry_msgs::Twist reply;
+      //geometry_msgs::Twist reply;
+			geometry_msgs::Pose2D reply;
       //reply.x = targ_x;reply.y = targ_y;
       //std::cout << "number of polygons: " << polygons.size() << '\n';
       //std::cout << "posOut, dim 1: " << posOut.size() << '\n';
@@ -533,8 +535,10 @@ private:
       }
       std::cout << '\n';*/
       for (size_t i = 0; i < posOut.at(0).size(); i++) {
-        reply.linear.x = posOut.at(0).at(i);
-        reply.linear.y = posOut.at(1).at(i);
+        //reply.linear.x = posOut.at(0).at(i);
+        //reply.linear.y = posOut.at(1).at(i);
+				reply.x = posOut.at(0).at(i);
+        reply.y = posOut.at(1).at(i);
         robcont_pubs.at(i).publish(reply);
       }
 
