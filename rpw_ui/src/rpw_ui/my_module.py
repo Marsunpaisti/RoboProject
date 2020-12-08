@@ -50,7 +50,7 @@ class MyPlugin(Plugin):
         self._widget.start_button.clicked.connect(self.start_button_clicked)
         self._widget.reset_button.clicked.connect(self.reset_button_clicked)
 
-        
+
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
 
@@ -59,10 +59,10 @@ class MyPlugin(Plugin):
             param_str = rospy.get_param('robot_names_set')
             params = param_str.split()
             rospy.loginfo("Robot parameters: " + str(params))
-
-        self.robots = []
-        for robot_id in params:
-            self.robots.append( Robot(robot_id) )
+            # Init gui robots
+            self.robots = []
+            for robot_id in params:
+                self.robots.append( Robot(robot_id) )
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -113,6 +113,4 @@ class MyPlugin(Plugin):
         self.pub.unregister()
         self.timer.stop()
         # Unsubscribe robots listening odom
-        for robot in self.robots:
-            robot.unsubscribe()
-
+        del self.robots

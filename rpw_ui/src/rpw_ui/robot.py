@@ -17,7 +17,6 @@ class Robot:
         self.y_pos = msg.linear.y
 
 
-
-    def unsubscribe(self):
+    def __del__(self):
+        # Unsub when destroyed
         self.sub.unregister()
-        pass
