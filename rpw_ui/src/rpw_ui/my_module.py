@@ -12,7 +12,7 @@ from python_qt_binding.QtWidgets import QWidget
 from PyQt5 import Qt, QtGui
 from PyQt5.QtCore import  Qt, QTimer
 from PyQt5.QtGui import QBrush, QPen
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
 
 class MyPlugin(Plugin):
@@ -30,18 +30,22 @@ class MyPlugin(Plugin):
         loadUi(ui_file, self._widget)
         # Give QObjects reasonable names
         self._widget.setObjectName('MyPluginUi')
-
+        # Fix button area
+        self._widget.setFixedWidth(270)
         # Add .ui file's widget to the user interface
         context.add_widget(self._widget)
 
         # Add scene, view, ROI rectangle
-        scene = QGraphicsScene(0,0,1000,500)
+        self.scene = QGraphicsScene(0,0,500,500, self)
+        self.scene.setSceneRect(0,0,500,500)
 
         self.roi_widht = 200
         self.roi_height = 200
-        self.roi = scene.addRect(0,0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
+        self.roi = self.scene.addRect(50, 0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
-        view = QGraphicsView(scene)
+
+        view = QGraphicsView(self.scene)
+        view.setFixedSize(1000, 1000)
         context.add_widget(view)
 
         # Publisher timer and start / stop / reset button
@@ -55,14 +59,16 @@ class MyPlugin(Plugin):
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
 
         # Get robot parameters
+        self.robots = []
         if rospy.has_param('robot_names_set'):
             param_str = rospy.get_param('robot_names_set')
             params = param_str.split()
             rospy.loginfo("Robot parameters: " + str(params))
             # Init gui robots
-            self.robots = []
             for robot_id in params:
-                self.robots.append( Robot(robot_id) )
+                self.robots.append( Robot(robot_id, self.scene) )
+
+        # self.scene.addEllipse(0,0,10,10, QPen(Qt.red), QBrush(Qt.red))
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
