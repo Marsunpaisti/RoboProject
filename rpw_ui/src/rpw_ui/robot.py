@@ -14,7 +14,7 @@ class Robot:
         # Subscribe
         self.sub = rospy.Subscriber(self.topic, Twist, callback=self.callback)
 
-        # scene.addEllipse(0, 0, 30, 30, QPen(Qt.red), QBrush(Qt.red))
+        scene.addEllipse(0, 0, 30, 30, QPen(Qt.red), QBrush(Qt.red))
 
     def callback(self, msg):
         self.x_pos = msg.linear.x

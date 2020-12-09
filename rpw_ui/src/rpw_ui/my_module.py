@@ -35,16 +35,16 @@ class MyPlugin(Plugin):
         # Add .ui file's widget to the user interface
         context.add_widget(self._widget)
 
-        # Add scene, view, ROI rectangle
-        self.scene = QGraphicsScene(0,0,500,500, self)
-        self.scene.setSceneRect(0,0,500,500)
-
+        # Add scene, view,
+        self.scene = QGraphicsScene(0,0,998,998) # setSceneRect as parameter
+        # ROI rectangle
         self.roi_widht = 200
         self.roi_height = 200
-        self.roi = self.scene.addRect(50, 0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
+        self.roi = self.scene.addRect(0, 0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
-
+        # Setup view
         view = QGraphicsView(self.scene)
+        view.setGeometry(0,1000,0,1000)
         view.setFixedSize(1000, 1000)
         context.add_widget(view)
 
@@ -69,6 +69,7 @@ class MyPlugin(Plugin):
                 self.robots.append( Robot(robot_id, self.scene) )
 
         # self.scene.addEllipse(0,0,10,10, QPen(Qt.red), QBrush(Qt.red))
+        self.scene.addLine(0,0,100,100, QPen(Qt.green))
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":

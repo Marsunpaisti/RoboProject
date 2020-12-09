@@ -89,9 +89,9 @@
    <widget class="QTextEdit" name="position_edit">
     <property name="geometry">
      <rect>
-      <x>130</x>
+      <x>123</x>
       <y>90</y>
-      <width>104</width>
+      <width>111</width>
       <height>31</height>
      </rect>
     </property>
