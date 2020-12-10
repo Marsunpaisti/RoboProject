@@ -44,11 +44,6 @@ void Controller::loop()
             ": canceling loop. No odometry received yet");
         return;
     };
-
-    // TODO Remove hardcoded target
-    haveTargetPose = true;
-    targetPose.x = 4;
-    targetPose.y = -1;
     if (!haveTargetPose) {
         ROS_INFO("%s %s", robotName.c_str(),
             ": canceling loop. No target pose received yet");
@@ -59,22 +54,28 @@ void Controller::loop()
         = targetPose.x - currentPose.x;
     double dy = targetPose.y - currentPose.y;
     double angleToTarget = atan2(dy, dx); // Returns -pi < ang < pi
+    double angleToTargetReverse = atan2(-dy, -dx);
     double angleDifference = angleToTarget - currentPose.theta;
+    double angleDifferenceReverse = angleToTargetReverse - currentPose.theta;
     double distanceToTarget = sqrt(dx * dx + dy * dy);
     if (angleDifference > 3.1415926535) {
         angleDifference -= 3.1415926535 * 2;
     } else if (angleDifference < -3.1415926535) {
         angleDifference += 3.1415926535 * 2;
     }
-
+    if (angleDifferenceReverse > 3.1415926535) {
+        angleDifferenceReverse -= 3.1415926535 * 2;
+    } else if (angleDifferenceReverse < -3.1415926535) {
+        angleDifferenceReverse += 3.1415926535 * 2;
+    }
     double angleSteer = 0;
     double linearSteer = 0;
-    if (distanceToTarget > 0.05) {
+    if (distanceToTarget > 0.035) {
         angleSteer = angleController.calculate(angleToTarget, currentPose.theta);
     } else { // Align self to target theta once we are at target location
         angleSteer = angleController.calculate(targetPose.theta, currentPose.theta);
     }
-    if (distanceToTarget > 0.05 && fabs(angleDifference) < (10 * (3.14159 / 180))) { // Only run angle controller if we are roughly facing target
+    if (distanceToTarget > 0.035 && fabs(angleDifference) < (10 * (3.14159 / 180))) { // Only run angle controller if we are roughly facing target
         linearSteer = distanceController.calculate(0, distanceToTarget);
     }
 
@@ -128,15 +129,35 @@ Controller::Controller(std::string robotName)
     ROS_INFO("%s %s", robotName.c_str(), ": controller initialized");
 }
 
+std::vector<std::string> split_string_by_spaces(std::string inputstr)
+{
+    std::stringstream tmpss(inputstr);
+    std::vector<std::string> out;
+    std::string tmps;
+    while (getline(tmpss, tmps, ' ')) {
+        out.push_back(tmps);
+    }
+    return out;
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "voronoi_controller");
     ros::NodeHandle nh;
     ros::Rate loop_rate(50);
     ROS_INFO("%s", "Voronoi controller started");
+
+    // Create controller object for all robots given in launchfile
     std::vector<boost::shared_ptr<Controller> > controllers;
-    boost::shared_ptr<Controller> testController(new Controller(""));
-    controllers.push_back(testController);
+    std::string robotNames;
+    bool paramSucceeded = nh.getParam("robot_names_set", robotNames);
+    std::vector<std::string> robotNamesSplit = split_string_by_spaces(robotNames);
+    for (std::string& robotName : robotNamesSplit) {
+        boost::shared_ptr<Controller> robotController(new Controller(robotName));
+        controllers.push_back(robotController);
+    }
+
+    // Main loop
     while (ros::ok()) {
         for (auto& pController : controllers) {
             pController->loop();

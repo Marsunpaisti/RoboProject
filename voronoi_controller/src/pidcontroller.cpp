@@ -9,7 +9,7 @@ PIDController::PIDController(double sampleTime, double min, double max, double K
     , _Kd(Kd)
     , _Ki(Ki)
     , _isAngleController(isAngleController)
-    , _prevError(0)
+    , _prevMeasurement(0)
     , _isFirstLoop(true)
 {
 }
@@ -32,11 +32,11 @@ double PIDController::calculate(double setpoint, double measurement)
     _integral += error * _sampleTime * _Ki;
 
     if (_isFirstLoop) { // _prevError is initialized to 0 so on first loop it might cause a huge spike in D term unless ignored
-        _prevError = error;
+        _prevMeasurement = measurement;
     }
-    double derivative = (_prevError - error) / _sampleTime;
+    double derivative = (_prevMeasurement - measurement) / _sampleTime;
     if (_isAngleController) { // Gimbal lock must be avoided here as well
-        derivative = (_prevError - error);
+        derivative = (_prevMeasurement - measurement);
         if (derivative > 3.1415926535) {
             derivative -= 3.1415926535 * 2;
         } else if (derivative < -3.1415926535) {
@@ -57,7 +57,7 @@ double PIDController::calculate(double setpoint, double measurement)
         _integral += error * _sampleTime * _Ki;
     }
 
-    _prevError = error;
+    _prevMeasurement = error;
     _isFirstLoop
         = false;
     return output;

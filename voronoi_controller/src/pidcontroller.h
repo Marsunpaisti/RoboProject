@@ -14,7 +14,7 @@ private:
     double _Kp;
     double _Kd;
     double _Ki;
-    double _prevError;
+    double _prevMeasurement;
     double _integral;
     bool _isAngleController;
     bool _isFirstLoop = true;
