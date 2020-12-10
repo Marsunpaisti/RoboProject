@@ -19,12 +19,14 @@ class Robot(QObject):
         # Subscribe
         self.sub = rospy.Subscriber(self.topic, Twist, callback=self.callback)
 
-        self.count = 15
+        self.count = 15 # Debug
 
     def callback(self, msg):
+        # Debug
         if self.count < 0:
             return
         self.count = self.count - 1
+        # /Debug
         previous_coords = self.coords_in.copy()
 
         self.coords_in['x'] = msg.linear.x
