@@ -11,6 +11,7 @@ PIDController::PIDController(double sampleTime, double min, double max, double K
     , _isAngleController(isAngleController)
     , _prevMeasurement(0)
     , _isFirstLoop(true)
+    , _integral(0)
 {
 }
 
@@ -34,9 +35,9 @@ double PIDController::calculate(double setpoint, double measurement)
     if (_isFirstLoop) { // _prevError is initialized to 0 so on first loop it might cause a huge spike in D term unless ignored
         _prevMeasurement = measurement;
     }
-    double derivative = (_prevMeasurement - measurement) / _sampleTime;
+    double derivative = (measurement - _prevMeasurement) / _sampleTime;
     if (_isAngleController) { // Gimbal lock must be avoided here as well
-        derivative = (_prevMeasurement - measurement);
+        derivative = (measurement - _prevMeasurement);
         if (derivative > 3.1415926535) {
             derivative -= 3.1415926535 * 2;
         } else if (derivative < -3.1415926535) {
@@ -48,7 +49,9 @@ double PIDController::calculate(double setpoint, double measurement)
     double pTerm = error * _Kp;
     double output = pTerm + dTerm + _integral;
 
-    //ROS_INFO("SET: %f MEAS: %f P: %f D: %f I: %f", setpoint, measurement, pTerm, dTerm, _integral);
+    if (_isAngleController) {
+        ROS_INFO("SET: %f MEAS: %f P: %f D: %f I: %f", setpoint, measurement, pTerm, dTerm, _integral);
+    }
     if (output > _max) { // Clamp output and conditionally integrate as anti windup
         output = _max;
         _integral -= error * _sampleTime * _Ki;
@@ -57,7 +60,7 @@ double PIDController::calculate(double setpoint, double measurement)
         _integral += error * _sampleTime * _Ki;
     }
 
-    _prevMeasurement = error;
+    _prevMeasurement = measurement;
     _isFirstLoop
         = false;
     return output;
