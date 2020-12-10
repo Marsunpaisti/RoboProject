@@ -1,10 +1,10 @@
 import os
 import rospy
 import rospkg
+from robot import Robot
 
 from geometry_msgs.msg import Polygon
 from geometry_msgs.msg import Point32
-from std_msgs.msg import String
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
@@ -53,8 +53,16 @@ class MyPlugin(Plugin):
 
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
-        self.rate = rospy.Rate(10)
 
+        # Get robot parameters
+        if rospy.has_param('robot_names_set'):
+            param_str = rospy.get_param('robot_names_set')
+            params = param_str.split()
+            rospy.loginfo("Robot parameters: " + str(params))
+            # Init gui robots
+            self.robots = []
+            for robot_id in params:
+                self.robots.append( Robot(robot_id) )
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -101,8 +109,8 @@ class MyPlugin(Plugin):
         self.roi.setPos(0,0)
 
     def shutdown_plugin(self):
-        # TODO unregister all publishers here
         rospy.loginfo("Exiting..")
         self.pub.unregister()
         self.timer.stop()
-        pass
+        # Unsubscribe robots listening odom
+        del self.robots
