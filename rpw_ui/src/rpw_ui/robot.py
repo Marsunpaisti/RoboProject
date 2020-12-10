@@ -1,15 +1,15 @@
 import rospy
 from geometry_msgs.msg import Twist
 from PyQt5.QtGui import QBrush, QPen
-from PyQt5.QtCore import  Qt, pyqtSignal
+from PyQt5.QtCore import  Qt, pyqtSignal, pyqtSlot, QObject
 
 import transformation
 
-class Robot:
+class Robot(QObject):
 
-    def __init__(self, id, scene):
+    def __init__(self, id):
+        QObject.__init__(self)
         self.id = id
-        self.scene = scene
         self.topic = "/{}/odom".format(id)
         rospy.loginfo("{} created and listens to topic: {}".format(self.id, self.topic))
 
@@ -25,14 +25,13 @@ class Robot:
         if self.count < 0:
             return
         self.count = self.count - 1
-        previous_coords = self.coords_in
-        print str(self.id) + "previous: " + str(previous_coords) + "next: " + str(self.coords_in)
-        # self.x_pos = msg.linear.x
-        # self.y_pos = msg.linear.y
+        previous_coords = self.coords_in.copy()
+
         self.coords_in['x'] = msg.linear.x
         self.coords_in['y'] = msg.linear.y
+        # print str(self.id) + " previous: " + str(previous_coords) + " next: " + str(self.coords_in)
 
-        if cmp(self.coords_in, previous_coords):
+        if self.coords_in == previous_coords:
             return
         else:
             self.update_ui()
@@ -40,7 +39,9 @@ class Robot:
     def update_ui(self):
 
         if not self.circle:
-            self.scene.addEllipse(0, 0, 30, 30, QPen(Qt.red), QBrush(Qt.red))
+            self.circle = "yes"
+            print "draw circle"
+            # self.scene.addEllipse(0, 0, 30, 30, QPen(Qt.red), QBrush(Qt.red))
 
         pass
 

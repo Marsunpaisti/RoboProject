@@ -66,7 +66,7 @@ class MyPlugin(Plugin):
             rospy.loginfo("Robot parameters: " + str(params))
             # Init gui robots
             for robot_id in params:
-                self.robots.append( Robot(robot_id, self.scene) )
+                self.robots.append( Robot(robot_id) )
 
         # self.scene.addEllipse(0,0,10,10, QPen(Qt.red), QBrush(Qt.red))
         self.scene.addLine(0,0,100,100, QPen(Qt.green))
