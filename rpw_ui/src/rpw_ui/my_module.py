@@ -70,6 +70,7 @@ class MyPlugin(Plugin):
 
         # self.scene.addEllipse(0,0,10,10, QPen(Qt.red), QBrush(Qt.red))
         self.scene.addLine(0,0,100,100, QPen(Qt.green))
+        self.roi.setPos(100,100)
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
