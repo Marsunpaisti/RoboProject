@@ -63,10 +63,10 @@ void Controller::loop()
         if (test_angle_num >= 3)
             test_angle_num = 0;
     }
-    haveTargetPose = true;
+    /*haveTargetPose = true;
     targetPose.x = 3;
     targetPose.y = -3 + 3 * test_angle_num;
-    targetPose.theta = -3.14159 + test_angle_num * (3.14159 / 2.0);
+    targetPose.theta = -3.14159 + test_angle_num * (3.14159 / 2.0);*/
     if (!haveTargetPose) {
         ROS_INFO("%s %s", robotName.c_str(),
             ": canceling loop. No target pose received yet");
@@ -186,6 +186,7 @@ int main(int argc, char** argv)
         boost::shared_ptr<Controller> robotController(new Controller(robotName));
         controllers.push_back(robotController);
     }
+    //ROS_INFO("%s",std::to_string(robotNamesSplit.size()).c_str());
 
     // Main loop
     while (ros::ok()) {

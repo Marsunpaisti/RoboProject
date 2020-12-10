@@ -2,6 +2,7 @@
   <param name="robot_names_set" value = "robo1 robo2 robo3" />
   <node pkg="voronoi_alg" name="voronoiCaller" type="voronoiCaller" >
   </node>
-  <node pkg="voronoi_alg" name="multinodegen" type="multinodegen" >
+<!--  <node pkg="voronoi_alg" name="multinodegen" type="multinodegen" >
   </node>
+-->
 </launch>

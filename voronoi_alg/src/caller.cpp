@@ -36,6 +36,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Polygon.h"
+#include "nav_msgs/Odometry.h"
 
 constexpr float WINDOW_WIDTH = 600.0f;
 constexpr float WINDOW_HEIGHT = 600.0f;
@@ -68,8 +69,8 @@ void cornersToRotangles(std::vector<std::vector<float> > corners, float* costh, 
     ay = corners.at(0).at(1);
     bx = corners.at(1).at(0);
     by = corners.at(1).at(1);
-    *costh = (by - ay) / sqrt((by - ay) * (by - ay) + (bx - ax) * (bx - ax));
-    *sinth = (bx - ax) / sqrt((by - ay) * (by - ay) + (bx - ax) * (bx - ax));
+    *costh = (bx - ax) / sqrt((by - ay) * (by - ay) + (bx - ax) * (bx - ax));
+    *sinth = (by - ay) / sqrt((by - ay) * (by - ay) + (bx - ax) * (bx - ax));
 }
 std::vector<std::vector<float> > transformRobLocsAndCorners(std::vector<std::vector<float> > corners,
     std::vector<std::vector<float> > robLocs, float* xmin, float* xmax, float* ymin, float* ymax)
@@ -166,6 +167,10 @@ void findAllCentroids(std::vector<std::vector<std::vector<float> > > polygons, s
     std::vector<std::vector<float> > newCentroids;
     std::vector<float> newCentroid;
     for (size_t i = 0; i < polygons.size(); i++) {
+      /*std::cout << "polygon " << i << ":" << '\n';
+      for (size_t j = 0; j < polygons.at(i).size(); j++) {
+        std::cout << "x: " << polygons.at(i).at(j).at(0) << ", y: " << polygons.at(i).at(j).at(1) << '\n';
+      }*/
         computeCentroid(polygons.at(i), &newCentroid);
         newCentroids.push_back(newCentroid);
     }
@@ -399,6 +404,34 @@ std::vector<std::vector<float> > rowVecToColVec(std::vector<std::vector<float> >
     }
     return colVec;
 }
+void cullPoints(float xmin, float xmax, float ymin, float ymax,
+  std::vector<std::vector<float>> unculledPoints,
+  std::vector<std::vector<float>>* generatedPoints,
+  std::vector<std::vector<float>>* unrotatedTargs,
+  std::vector<bool>* validPoints){
+
+  std::vector<std::vector<float>> generatedPointsTmp, unrotatedTargsTmp;
+  std::vector<bool> validPointsTmp;
+
+  std::vector<float> center;
+  center.push_back((xmin+xmax)/2);center.push_back((ymin+ymax)/2);
+
+  for (size_t i = 0; i < unculledPoints.size(); i++) {
+    unrotatedTargsTmp.push_back(center);
+    if (unculledPoints.at(i).at(0)>xmax||unculledPoints.at(i).at(0)<xmin||
+          unculledPoints.at(i).at(1)>ymax||unculledPoints.at(i).at(1)<ymin) {
+    //if (unculledPoints.at(i).at(0)>xmax||unculledPoints.at(i).at(0)<xmin||
+          //unculledPoints.at(i).at(1)>ymax||unculledPoints.at(i).at(1)<ymin) {
+      validPointsTmp.push_back(0);
+    } else {
+      validPointsTmp.push_back(1);
+      generatedPointsTmp.push_back(unculledPoints.at(i));
+    }
+  }
+  *generatedPoints = generatedPointsTmp;
+  *unrotatedTargs = unrotatedTargsTmp;
+  *validPoints = validPointsTmp;
+}
 
 class Voronoicbc {
 public:
@@ -470,68 +503,56 @@ private:
         //std::cout << "about to write odometry data:" << '\n';
         //std::cout << "length of robodom_x: " << robodom_x.size() << '\n';
         robodom_x.at(nodeNum) = msg->pose.pose.position.x;
-        robodom_y.at(nodeNum) = msg->pose.pose.position.x;
+        robodom_y.at(nodeNum) = msg->pose.pose.position.y;
         //std::cout << "odometry data written" << '\n';
         posIn.push_back(robodom_x);
         posIn.push_back(robodom_y);
         std::vector<std::vector<float> > targetAsColVec = rowVecToColVec(targetAsRowVec);
-        float costh, sinth;
-        cornersToRotangles(targetAsColVec, &costh, &sinth);
+        //float costh, sinth;
+        //cornersToRotangles(targetAsColVec, &costh, &sinth);
         //std::vector<std::vector<float>>
         float xmin, xmax, ymin, ymax;
-        std::vector<std::vector<float> > generatedPoints = transformRobLocsAndCorners(targetAsColVec, rowVecToColVec(posIn),
-            &xmin, &xmax, &ymin, &ymax);
+        std::vector<std::vector<float> > unculledPoints = transformRobLocsAndCorners(targetAsColVec,
+           rowVecToColVec(posIn), &xmin, &xmax, &ymin, &ymax);
+        std::vector<std::vector<float> > generatedPoints;
+        std::vector<bool> validPoints;
+        std::vector<std::vector<float> > unrotatedTargs;
+        cullPoints(xmin, xmax, ymin, ymax, unculledPoints, &generatedPoints, &unrotatedTargs, &validPoints);
+        //std::cout << "cullPoints worked" << '\n';
+        if (generatedPoints.size()>1) {
+          std::vector<std::vector<float> > centroids;
+          Vector2 bottomLeftCorner, topRightCorner;
+          bottomLeftCorner.x = xmin;
+          bottomLeftCorner.y = ymin;
+          topRightCorner.x = xmax;
+          topRightCorner.y = ymax;
+          // Write generated points to generatedPoints:
+          VoronoiDiagram diagram = generateRandomDiagram(&generatedPoints,
+              bottomLeftCorner, topRightCorner);
 
-        //std::size_t nbPoints = 2;
-        std::vector<std::vector<float> > centroids;
-        // Generate points
-        //std::vector<Vector2> points = generatePoints(nbPoints);
-        Vector2 bottomLeftCorner, topRightCorner;
-        //bottomLeftCorner.x=botLX;bottomLeftCorner.y=botLY;
-        //topRightCorner.x=topRX;topRightCorner.y=topRY;
-        bottomLeftCorner.x = xmin;
-        bottomLeftCorner.y = ymin;
-        topRightCorner.x = xmax;
-        topRightCorner.y = ymax;
-        // Write generated points to generatedPoints:
-        //std::vector<std::vector<float>> generatedPoints = colVecToRowVec(posIn);//vector2toFloats(points);
+          std::vector<std::vector<std::vector<float> > > polygons;
 
-        VoronoiDiagram diagram = generateRandomDiagram(&generatedPoints,
-            bottomLeftCorner, topRightCorner);
+          //count the edges:
+          countEdges(diagram);
+          //detect the polygons:
+          detectPolygon(diagram, &polygons);
+          //detect the point centers:
+          findAllCentroids(polygons, &centroids);
+          //write the positions inside the target region to the unrotatedTargs:
+          int currCentroidInd = 0;
+          for (size_t i = 0; i < unrotatedTargs.size(); i++) {
+            if (validPoints.at(i)) {
+              unrotatedTargs.at(i) = centroids.at(currCentroidInd);
+              currCentroidInd++;
+            }
+          }
+        }
 
-        std::vector<std::vector<std::vector<float> > > polygons;
-
-        //count the edges:
-        countEdges(diagram);
-        //detect the polygons:
-        detectPolygon(diagram, &polygons);
-        //detect the point centers:
-        findAllCentroids(polygons, &centroids);
-        //std::cout << "number of centroids: " << centroids.size() << '\n';
-        //posOut = rowVecToColVec(centroids);
-        posOut = centroids;
-        //std::cout << "posOut, dim 1: " << posOut.size() << '\n';
-        //std::cout << "posOut, dim 2: " << posOut.at(0).size() << '\n';
-        posOut = transformTargetLocs(posOut, targetAsColVec);
-        //print result:
-        //printPointsWithCentroids(generatedPoints,centroids);
-
-        /*std::string xcoord_as_str = std::to_string(msg->x.at(0));
-      ROS_INFO("I heard: [%s]", xcoord_as_str.c_str());
-      if (targ_x.size()==1){
-          targ_x.at(0)+=msg->x.at(0);
-          targ_y.at(0)+=msg->y.at(0);
-      } else {
-          targ_x.push_back(0);targ_y.push_back(0);
-      }*/
+        posOut = transformTargetLocs(unrotatedTargs, targetAsColVec);
         geometry_msgs::Pose2D reply;
-      for (size_t i = 0; i < posOut.size(); i++) {
-        std::cout << posOut.at(i).at(0) << " ";
-      }
-      std::cout << '\n';*/
-        for (size_t i = 0; i < posOut.at(0).size(); i++) {
-            reply.x = posOut.at(0).at(i);
-            reply.y = posOut.at(1).at(i);
+        for (size_t i = 0; i < posOut.size(); i++) {
+            reply.x = posOut.at(i).at(0);
+            reply.y = posOut.at(i).at(1);
             robcont_pubs.at(i).publish(reply);
         }
 
@@ -544,67 +565,6 @@ private:
         //std::string botlx_as_str = std::to_string(botLX);
         //ROS_INFO("Bottom left x: [%s]", botlx_as_str.c_str());
     }
-    /*  void robPosVecCb(const voronoi_alg::RobotPos::ConstPtr& msg){
-			std::vector<std::vector<float>> posIn, posOut,
-				targetAsRowVec{target_region_x,target_region_y};
-			posIn.push_back(msg->x);
-			posIn.push_back(msg->y);
-			std::vector<std::vector<float>> targetAsColVec = rowVecToColVec(targetAsRowVec);
-			float costh, sinth;
-			cornersToRotangles(targetAsColVec, &costh, &sinth);
-			//std::vector<std::vector<float>>
-			float xmin, xmax, ymin, ymax;
-			std::vector<std::vector<float>> generatedPoints =
-				transformRobLocsAndCorners(targetAsColVec, rowVecToColVec(posIn),
-				&xmin, &xmax, &ymin, &ymax);
-
-			//std::size_t nbPoints = 2;
-	    std::vector<std::vector<float>> centroids;
-	    // Generate points
-	    //std::vector<Vector2> points = generatePoints(nbPoints);
-			Vector2 bottomLeftCorner, topRightCorner;
-			//bottomLeftCorner.x=botLX;bottomLeftCorner.y=botLY;
-			//topRightCorner.x=topRX;topRightCorner.y=topRY;
-			bottomLeftCorner.x=xmin;bottomLeftCorner.y=ymin;
-			topRightCorner.x=xmax;topRightCorner.y=ymax;
-	    // Write generated points to generatedPoints:
-	    //std::vector<std::vector<float>> generatedPoints = colVecToRowVec(posIn);//vector2toFloats(points);
-
-	    VoronoiDiagram diagram = generateRandomDiagram(&generatedPoints,
-				bottomLeftCorner, topRightCorner);
-
-	    std::vector<std::vector<std::vector<float>>> polygons;
-
-	    //count the edges:
-	    countEdges(diagram);
-	    //detect the polygons:
-	    detectPolygon(diagram, &polygons);
-	    //detect the point centers:
-	    findAllCentroids(polygons, &centroids);
-			posOut = rowVecToColVec(centroids);
-			posOut = transformTargetLocs(posOut, targetAsColVec);
-	    //print result:
-	    //printPointsWithCentroids(generatedPoints,centroids);
-
-        /*std::string xcoord_as_str = std::to_string(msg->x.at(0));
-        ROS_INFO("I heard: [%s]", xcoord_as_str.c_str());
-        if (targ_x.size()==1){
-            targ_x.at(0)+=msg->x.at(0);
-            targ_y.at(0)+=msg->y.at(0);
-        } else {
-            targ_x.push_back(0);targ_y.push_back(0);
-        }*/
-    /*voronoi_alg::RobotPos reply;
-        //reply.x = targ_x;reply.y = targ_y;
-				reply.x = posOut.at(0);reply.y = posOut.at(1);
-        targloc_pub.publish(reply);
-				std::string xcoord_as_str = std::to_string(reply.x.at(0));
-				ROS_INFO("First target x: [%s]", xcoord_as_str.c_str());
-				std::string ycoord_as_str = std::to_string(reply.y.at(0));
-				ROS_INFO("First target y: [%s]", ycoord_as_str.c_str());
-				std::string botlx_as_str = std::to_string(botLX);
-				ROS_INFO("Bottom left x: [%s]", botlx_as_str.c_str());
-    };*/
     float recXcoord = 0, botLX, botLY, topRX, topRY;
     std::vector<float> target_region_x, target_region_y, robodom_x, robodom_y;
     ros::Publisher targloc_pub;
