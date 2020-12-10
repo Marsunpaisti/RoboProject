@@ -27,8 +27,11 @@ public:
     Controller(std::string robotName);
     void loop();
     void stop();
-    PIDController angleController = PIDController(1.0 / 50.0, -0.65, 0.65, 1, -0.1, 0, true);
-    PIDController distanceController = PIDController(1.0 / 50.0, 0, 0.6, -1.3, 0.1, 0, false);
+    PIDController angleController = PIDController(1.0 / 50.0, -1.8, 1.8, 1.5, -0.1, 0, true);
+    PIDController distanceController = PIDController(1.0 / 50.0, 0, 0.75, -1, 0.0, 0, false);
+    bool enableDistControl = false;
+    long test_timer = 0;
+    int test_angle_num = 0;
 };
 
 void Controller::stop()
@@ -44,6 +47,26 @@ void Controller::loop()
             ": canceling loop. No odometry received yet");
         return;
     };
+    test_timer += 50;
+    /*
+    if (test_timer >= 4000) {
+        test_timer -= 4000;
+        test_angle_num += 1;
+        if (test_angle_num >= 4) {
+            test_angle_num = 0;
+        }
+    }
+    */
+    if (test_timer > 25000) {
+        test_timer -= 25000;
+        test_angle_num += 1;
+        if (test_angle_num >= 3)
+            test_angle_num = 0;
+    }
+    haveTargetPose = true;
+    targetPose.x = 3;
+    targetPose.y = -3 + 3 * test_angle_num;
+    targetPose.theta = -3.14159 + test_angle_num * (3.14159 / 2.0);
     if (!haveTargetPose) {
         ROS_INFO("%s %s", robotName.c_str(),
             ": canceling loop. No target pose received yet");
@@ -75,7 +98,15 @@ void Controller::loop()
     } else { // Align self to target theta once we are at target location
         angleSteer = angleController.calculate(targetPose.theta, currentPose.theta);
     }
-    if (distanceToTarget > 0.035 && fabs(angleDifference) < (10 * (3.14159 / 180))) { // Only run angle controller if we are roughly facing target
+
+    if (fabs(angleDifference) < (0.5 * (3.14159 / 180.0))) {
+        enableDistControl = true;
+    }
+    if (fabs(angleDifference) > (15 * (3.14159 / 180.0))) {
+        enableDistControl = false;
+    }
+
+    if (distanceToTarget > 0.035 && enableDistControl) { // Only run angle controller if we are roughly facing target
         linearSteer = distanceController.calculate(0, distanceToTarget);
     }
 
@@ -86,7 +117,7 @@ void Controller::loop()
     geometry_msgs::Twist outputTwist;
     outputTwist.angular.z = angleSteer;
     outputTwist.linear.x = linearSteer;
-    ROS_INFO("OUTPUT: LINEAR X: %f Y:%f Z: %f, ANGULAR: X: %f, Y: %f, Z: %f", outputTwist.linear.x, outputTwist.linear.y, outputTwist.linear.z, outputTwist.angular.x, outputTwist.angular.y, outputTwist.angular.z);
+    //ROS_INFO("OUTPUT: LINEAR X: %f Y:%f Z: %f, ANGULAR: X: %f, Y: %f, Z: %f", outputTwist.linear.x, outputTwist.linear.y, outputTwist.linear.z, outputTwist.angular.x, outputTwist.angular.y, outputTwist.angular.z);
     outputPublisher.publish(outputTwist);
 }
 
@@ -114,14 +145,13 @@ void Controller::inputOdometryCb(const nav_msgs::Odometry::ConstPtr pOdometryMsg
     currentPose.y = pOdometryMsg->pose.pose.position.y;
     currentPose.theta = yaw;
     haveCurrentPose = true;
+    loop();
 }
 
 Controller::Controller(std::string robotName)
     : robotName(robotName)
 {
     ros::NodeHandle nh;
-    currentPose.x = 1;
-    currentPose.y = 2;
     inputTargetSubscriber = nh.subscribe(robotName + "/controller_target", 0,
         &Controller::inputTargetCb, this);
     odometrySubscriber = nh.subscribe(robotName + "/odom", 0, &Controller::inputOdometryCb, this);
@@ -144,7 +174,7 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "voronoi_controller");
     ros::NodeHandle nh;
-    ros::Rate loop_rate(50);
+    ros::Rate loop_rate(100);
     ROS_INFO("%s", "Voronoi controller started");
 
     // Create controller object for all robots given in launchfile
@@ -159,9 +189,6 @@ int main(int argc, char** argv)
 
     // Main loop
     while (ros::ok()) {
-        for (auto& pController : controllers) {
-            pController->loop();
-        }
         ros::spinOnce();
         loop_rate.sleep();
     }
