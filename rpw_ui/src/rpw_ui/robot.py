@@ -46,14 +46,14 @@ class Robot(QObject):
             self.update_ui()
 
     def update_ui(self):
+        scene_coords = transformation.world_to_scene(self.coords_in.get('x'), self.coords_in.get('y'))
 
         if not self._graphics_drawn:
-            scene_coords = transformation.world_to_scene( self.coords_in.get('x'), self.coords_in.get('y') )
             self.circle_draw.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
-            print "draw circle emited"
             self._graphics_drawn = True
+        else:
+            self.circle_update.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
 
-        pass
 
     def __del__(self):
         # Unsub when destroyedw
