@@ -105,9 +105,9 @@ class MyPlugin(Plugin):
         scale = 100
         # _l, _r = left / right; _u, _d = up / down
         x_l = (x - half_width) / scale
-        y_u = (y + half_height) / scale
+        y_u = (-y + half_height) / scale
         x_r = (x + half_width) / scale
-        y_d = (y - half_height) / scale
+        y_d = (-y - half_height) / scale
         rospy.loginfo("Sending to topic")
         z = 0.0
         roi_points.points.append(Point32(x_l, y_u, z))
