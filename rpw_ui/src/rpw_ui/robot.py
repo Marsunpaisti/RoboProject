@@ -7,22 +7,29 @@ import transformation
 
 class Robot(QObject):
 
-    def __init__(self, id):
+    circle_draw = pyqtSignal(int, int, int, int)  # ( robot id / x / y / diameter )
+    circle_update = pyqtSignal(int, int, int, int) # ( robot id / x / y / diameter )
+
+    def __init__(self, name):
         QObject.__init__(self)
-        self.id = id
-        self.topic = "/{}/odom".format(id)
-        rospy.loginfo("{} created and listens to topic: {}".format(self.id, self.topic))
+        self.name = name                                # 'roboN'
+        self.id = int( filter(str.isdigit, name) )      # N
+        self.topic = "/{}/odom".format(name)
+        rospy.loginfo("{} created and listens to topic: {}".format(self.name, self.topic))
 
         self.coords_in = dict(x=0.0, y=0.0)
-        self.circle = None
+        self._graphics_drawn = False
         print self.coords_in
         # Subscribe
         self.sub = rospy.Subscriber(self.topic, Twist, callback=self.callback)
 
         self.count = 15 # Debug
 
+        self.RBT_DIAM = 30  # Robot graphical size in pixels
+
     def callback(self, msg):
-        # Debug
+        """ Called when new message arrives in /odom """
+        # Debug: print few lines only
         if self.count < 0:
             return
         self.count = self.count - 1
@@ -31,7 +38,7 @@ class Robot(QObject):
 
         self.coords_in['x'] = msg.linear.x
         self.coords_in['y'] = msg.linear.y
-        # print str(self.id) + " previous: " + str(previous_coords) + " next: " + str(self.coords_in)
+        # print str(self.name) + " previous: " + str(previous_coords) + " next: " + str(self.coords_in)
 
         if self.coords_in == previous_coords:
             return
@@ -40,10 +47,11 @@ class Robot(QObject):
 
     def update_ui(self):
 
-        if not self.circle:
-            self.circle = "yes"
-            print "draw circle"
-            # self.scene.addEllipse(0, 0, 30, 30, QPen(Qt.red), QBrush(Qt.red))
+        if not self._graphics_drawn:
+            scene_coords = transformation.world_to_scene( self.coords_in.get('x'), self.coords_in.get('y') )
+            self.circle_draw.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
+            print "draw circle emited"
+            self._graphics_drawn = True
 
         pass
 

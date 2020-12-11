@@ -1,6 +1,7 @@
 import os
 import rospy
 import rospkg
+import re
 from robot import Robot
 
 from geometry_msgs.msg import Polygon
@@ -10,7 +11,7 @@ from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
 from PyQt5 import Qt, QtGui
-from PyQt5.QtCore import  Qt, QTimer
+from PyQt5.QtCore import  Qt, QTimer, pyqtSignal, pyqtSlot, QObject
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
@@ -60,6 +61,10 @@ class MyPlugin(Plugin):
 
         # Get robot parameters
         self.robots = []
+
+        # Graphics signals
+
+
         if rospy.has_param('robot_names_set'):
             param_str = rospy.get_param('robot_names_set')
             params = param_str.split()
@@ -68,9 +73,13 @@ class MyPlugin(Plugin):
             for robot_id in params:
                 self.robots.append( Robot(robot_id) )
 
+        for robot in self.robots:
+            robot.circle_draw.connect(self.draw_circle)
+
+        # Testing
         # self.scene.addEllipse(0,0,10,10, QPen(Qt.red), QBrush(Qt.red))
-        self.scene.addLine(0,0,100,100, QPen(Qt.green))
-        self.roi.setPos(100,100)
+        # self.scene.addLine(0,0,100,100, QPen(Qt.green))
+        # self.roi.setPos(100,100)
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -110,7 +119,9 @@ class MyPlugin(Plugin):
 
         self.pub.publish(roi_points)
 
-
+    @pyqtSlot(int, int, int, int)
+    def draw_circle(self, id, x, y, diam):
+        self.scene.addEllipse(x, y, diam, diam, QPen(Qt.black), QBrush(Qt.red))
 
     def reset_button_clicked(self):
 
