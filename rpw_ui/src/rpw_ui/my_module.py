@@ -75,9 +75,11 @@ class MyPlugin(Plugin):
             for robot in self.robots:
                 robot.circle_draw.connect(self.draw_circle)
 
-        # Testing
-        # self.scene.addEllipse(0,0,10,10, QPen(Qt.red), QBrush(Qt.red))
-        # self.scene.addLine(0,0,100,100, QPen(Qt.green))
+        # Coordinate graphics
+        self.scene.addEllipse(498, 498, 4, 4, QPen(Qt.blue), QBrush(Qt.blue))
+        self.scene.addLine(500, 500, 1000, 500, QPen(Qt.green))
+        self.scene.addLine(500, 500, 500, 0, QPen(Qt.red))
+
         self.roi.setPos(450,400)
 
     def start_button_clicked(self):
