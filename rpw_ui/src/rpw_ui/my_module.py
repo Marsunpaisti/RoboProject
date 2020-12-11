@@ -3,6 +3,7 @@ import rospy
 import rospkg
 import re
 from robot import Robot
+import transformation
 
 from geometry_msgs.msg import Polygon
 from geometry_msgs.msg import Point32
@@ -98,22 +99,24 @@ class MyPlugin(Plugin):
         self._widget.position_edit.setText(str_pos)
         # print(str_pos)
 
-        # Calculate corner points
+        # Calculate ROI corner points
         roi_points = Polygon()
         half_width = float(self.roi_widht) / 2
         half_height = float(self.roi_height) / 2
-        scale = 100
-        # _l, _r = left / right; _u, _d = up / down
-        x_l = (x - half_width) / scale
-        y_u = (-y + half_height) / scale
-        x_r = (x + half_width) / scale
-        y_d = (-y - half_height) / scale
+        x_left = (x - half_width)
+        y_up = (-y + half_height)
+        x_right = (x + half_width)
+        y_down = (-y - half_height)
+
+        coords = [transformation.scene_to_world(x_left, y_up),
+                  transformation.scene_to_world(x_right, y_up),
+                  transformation.scene_to_world(x_right, y_down),
+                  transformation.scene_to_world(x_left, y_down)]
+
         rospy.loginfo("Sending to topic")
         z = 0.0
-        roi_points.points.append(Point32(x_l, y_u, z))
-        roi_points.points.append(Point32(x_r, y_u, z))
-        roi_points.points.append(Point32(x_r, y_d, z))
-        roi_points.points.append(Point32(x_l, y_d, z))
+        for i in range(len(coords)):
+            roi_points.points.append(Point32( coords[i].get('x'), coords[i].get('y'), z ))
 
         self.pub.publish(roi_points)
 
