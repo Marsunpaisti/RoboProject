@@ -1,0 +1,5 @@
+<launch>
+  <param name="robot_names_set" value = "robo1 robo2 robo3" />
+  <node pkg="voronoi_controller" name="voronoi_controller" type="voronoi_controller" output="screen" >
+  </node>
+</launch>

@@ -1,18 +1,20 @@
 import os
 import rospy
 import rospkg
+import re
+from robot import Robot
+import transformation
 
 from geometry_msgs.msg import Polygon
 from geometry_msgs.msg import Point32
-from std_msgs.msg import String
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
 from PyQt5 import Qt, QtGui
-from PyQt5.QtCore import  Qt, QTimer
+from PyQt5.QtCore import  Qt, QTimer, pyqtSignal, pyqtSlot, QObject
 from PyQt5.QtGui import QBrush, QPen
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
 
 class MyPlugin(Plugin):
@@ -30,18 +32,22 @@ class MyPlugin(Plugin):
         loadUi(ui_file, self._widget)
         # Give QObjects reasonable names
         self._widget.setObjectName('MyPluginUi')
-
+        # Fix button area
+        self._widget.setFixedWidth(270)
         # Add .ui file's widget to the user interface
         context.add_widget(self._widget)
 
-        # Add scene, view, ROI rectangle
-        scene = QGraphicsScene(0,0,1000,500)
-
+        # Add scene, view,
+        self.scene = QGraphicsScene(0,0,998,998) # setSceneRect as parameter
+        # ROI rectangle
         self.roi_widht = 200
         self.roi_height = 200
-        self.roi = scene.addRect(0,0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
+        self.roi = self.scene.addRect(0, 0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
-        view = QGraphicsView(scene)
+        # Setup view
+        view = QGraphicsView(self.scene)
+        view.setGeometry(0,1000,0,1000)
+        view.setFixedSize(1000, 1000)
         context.add_widget(view)
 
         # Publisher timer and start / stop / reset button
@@ -53,8 +59,28 @@ class MyPlugin(Plugin):
 
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
-        self.rate = rospy.Rate(10)
 
+        # Get robot parameters
+        self.robots = []
+        self.robot_graphics = []
+        if rospy.has_param('robot_names_set'):
+            param_str = rospy.get_param('robot_names_set')
+            params = param_str.split()
+            rospy.loginfo("Robot parameters: " + str(params))
+            # Init gui robots
+            for robot_id in params:
+                self.robots.append( Robot(robot_id) )
+
+            # Connect graphics signals
+            for robot in self.robots:
+                robot.circle_draw.connect(self.draw_circle)
+
+        # Coordinate graphics
+        self.scene.addEllipse(498, 498, 4, 4, QPen(Qt.blue), QBrush(Qt.blue))
+        self.scene.addLine(500, 500, 1000, 500, QPen(Qt.green))
+        self.scene.addLine(500, 500, 500, 0, QPen(Qt.red))
+
+        self.roi.setPos(400,400)
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -75,34 +101,42 @@ class MyPlugin(Plugin):
         self._widget.position_edit.setText(str_pos)
         # print(str_pos)
 
-        # Calculate corner points
+        # Calculate ROI corner points
         roi_points = Polygon()
         half_width = float(self.roi_widht) / 2
         half_height = float(self.roi_height) / 2
-        scale = 1000
-        # _l, _r = left / right; _u, _d = up / down
-        x_l = (x - half_width) / scale
-        y_u = (y + half_height) / scale
-        x_r = (x + half_width) / scale
-        y_d = (y - half_height) / scale
+        x_left = (x - half_width)
+        y_up = (-y + half_height)
+        x_right = (x + half_width)
+        y_down = (-y - half_height)
+
+        coords = [transformation.scene_to_world(x_left, y_up),
+                  transformation.scene_to_world(x_right, y_up),
+                  transformation.scene_to_world(x_right, y_down),
+                  transformation.scene_to_world(x_left, y_down)]
+
         rospy.loginfo("Sending to topic")
         z = 0.0
-        roi_points.points.append(Point32(x_l, y_u, z))
-        roi_points.points.append(Point32(x_r, y_u, z))
-        roi_points.points.append(Point32(x_r, y_d, z))
-        roi_points.points.append(Point32(x_l, y_d, z))
+        for i in range(len(coords)):
+            roi_points.points.append(Point32( coords[i].get('x'), coords[i].get('y'), z ))
 
         self.pub.publish(roi_points)
 
+    @pyqtSlot(int, int, int, int)
+    def draw_circle(self, id, x, y, diam):
+        self.robot_graphics.append( self.scene.addEllipse(x, y, diam, diam, QPen(Qt.black), QBrush(Qt.red)) )
 
+    @pyqtSlot(int, int, int, int)
+    def update_circle(self, id, x, y, diam):
+        circle_to_move = self.robot_graphics[id+1]
+        circle_to_move.setPox(x, y)
 
     def reset_button_clicked(self):
-
         self.roi.setPos(0,0)
 
     def shutdown_plugin(self):
-        # TODO unregister all publishers here
         rospy.loginfo("Exiting..")
         self.pub.unregister()
         self.timer.stop()
-        pass
+        # Unsubscribe robots listening odom
+        del self.robots

@@ -81,13 +81,13 @@ int main(int argc, char **argv)
     geometry_msgs::Polygon msg2;
     std::vector<geometry_msgs::Point32> points;
     geometry_msgs::Point32 point;
-    point.x = -2; point.y=-2;
+    point.x = -2.01; point.y=-2.01;
     points.push_back(point);
-    point.x = 5; point.y=8;
+    point.x = 4.99; point.y=7.99;
     points.push_back(point);
-    point.x = 15; point.y=1;
+    point.x = 14.99; point.y=0.99;
     points.push_back(point);
-    point.x = 8; point.y=-9;
+    point.x = 7.99; point.y=-9.01;
     points.push_back(point);
     msg2.points = points;
 
