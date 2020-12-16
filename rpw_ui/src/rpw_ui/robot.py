@@ -38,7 +38,6 @@ class Robot(QObject):
 
         self.coords_in['x'] = msg.pose.pose.position.x
         self.coords_in['y'] = msg.pose.pose.position.y
-        # print str(self.name) + " previous: " + str(previous_coords) + " next: " + str(self.coords_in)
 
         if self.coords_in == previous_coords:
             return

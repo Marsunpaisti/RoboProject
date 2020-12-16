@@ -105,12 +105,9 @@ class MyPlugin(Plugin):
         # Update GUI's position indicator
         str_pos = str(x) + ", " + str(y)
         self._widget.position_edit.setText(str_pos)
-        # print(str_pos)
 
         # Calculate ROI corner points
         roi_points = Polygon()
-        half_width = float(self.roi_widht) / 2
-        half_height = float(self.roi_height) / 2
         x_left = x
         y_up = y
         x_right = x + self.roi_widht
