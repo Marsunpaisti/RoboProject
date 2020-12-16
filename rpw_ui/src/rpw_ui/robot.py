@@ -19,7 +19,7 @@ class Robot(QObject):
 
         self.coords_in = dict(x=0.0, y=0.0)
         self._graphics_drawn = False
-        print self.coords_in
+
         # Subscribe
         self.sub = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
 

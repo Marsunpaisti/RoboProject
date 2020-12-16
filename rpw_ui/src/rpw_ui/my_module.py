@@ -89,10 +89,11 @@ class MyPlugin(Plugin):
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
-            rospy.loginfo("Stopping..")
+            rospy.loginfo("Stopping publishing to /target_region")
             self.timer.stop()
             self._widget.start_button.setText("Start")
         else:
+            rospy.loginfo("Starting publishing to /target_region")
             self._widget.start_button.setText("Stop")
             interval = self._widget.interval_spinbox.value()
             self.timer.start(interval)
@@ -114,14 +115,12 @@ class MyPlugin(Plugin):
         y_up = y
         x_right = x + self.roi_widht
         y_down = y + self.roi_height
-        print str(y_down)
 
         coords = [transformation.scene_to_world(x_left, y_up),
                   transformation.scene_to_world(x_right, y_up),
                   transformation.scene_to_world(x_right, y_down),
                   transformation.scene_to_world(x_left, y_down)]
 
-        rospy.loginfo("Sending to topic")
         z = 0.0
         for i in range(len(coords)):
             roi_points.points.append(Point32( coords[i].get('x'), coords[i].get('y'), z ))
@@ -142,7 +141,7 @@ class MyPlugin(Plugin):
         self.roi.setPos(0,0)
 
     def shutdown_plugin(self):
-        rospy.loginfo("Exiting..")
+        rospy.loginfo("Exiting")
         self.pub.unregister()
         self.timer.stop()
         # Unsubscribe robots listening odom
