@@ -130,7 +130,7 @@ class MyPlugin(Plugin):
     @pyqtSlot(int, int, int, int)
     def update_circle(self, id, x, y, diam):
         circle_to_move = self.robot_graphics[id+1]
-        circle_to_move.setPox(x, y)
+        circle_to_move.setPos(x, y)
 
     def reset_button_clicked(self):
         self.roi.setPos(0,0)
