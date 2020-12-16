@@ -1,5 +1,5 @@
 import rospy
-from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtCore import  Qt, pyqtSignal, pyqtSlot, QObject
 
@@ -21,7 +21,7 @@ class Robot(QObject):
         self._graphics_drawn = False
         print self.coords_in
         # Subscribe
-        self.sub = rospy.Subscriber(self.topic, Twist, callback=self.callback)
+        self.sub = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
 
         self.count = 15 # Debug
 
@@ -36,8 +36,8 @@ class Robot(QObject):
         # /Debug
         previous_coords = self.coords_in.copy()
 
-        self.coords_in['x'] = msg.linear.x
-        self.coords_in['y'] = msg.linear.y
+        self.coords_in['x'] = msg.pose.pose.position.x
+        self.coords_in['y'] = msg.pose.pose.position.y
         # print str(self.name) + " previous: " + str(previous_coords) + " next: " + str(self.coords_in)
 
         if self.coords_in == previous_coords:

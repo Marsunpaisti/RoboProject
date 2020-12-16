@@ -5,8 +5,8 @@ import re
 from robot import Robot
 import transformation
 
-from geometry_msgs.msg import Polygon
-from geometry_msgs.msg import Point32
+from geometry_msgs.msg import Polygon, Point32
+
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
