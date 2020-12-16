@@ -105,10 +105,11 @@ class MyPlugin(Plugin):
         roi_points = Polygon()
         half_width = float(self.roi_widht) / 2
         half_height = float(self.roi_height) / 2
-        x_left = (x - half_width)
-        y_up = (-y + half_height)
-        x_right = (x + half_width)
-        y_down = (-y - half_height)
+        x_left = x
+        y_up = y
+        x_right = x + self.roi_widht
+        y_down = y + self.roi_height
+        print str(y_down)
 
         coords = [transformation.scene_to_world(x_left, y_up),
                   transformation.scene_to_world(x_right, y_up),
