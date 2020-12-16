@@ -1,58 +1,46 @@
 import rospy
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Pose2D
 from PyQt5.QtGui import QBrush, QPen
-from PyQt5.QtCore import  Qt, pyqtSignal, pyqtSlot, QObject
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject
+import time
 
 import transformation
 
-class Robot(QObject):
 
-    circle_draw = pyqtSignal(int, int, int, int)  # ( robot id / x / y / diameter )
-    circle_update = pyqtSignal(int, int, int, int) # ( robot id / x / y / diameter )
+class Robot:
+    ROBOT_DIAMETER_PIXELS = 30  # Robot graphical size in pixels
 
-    def __init__(self, name):
-        QObject.__init__(self)
-        self.name = name                                # 'roboN'
-        self.id = int( filter(str.isdigit, name) )      # N
+    def __init__(self, name, graphicsScene):
+        self.name = name
         self.topic = "/{}/odom".format(name)
         rospy.loginfo("{} created and listens to topic: {}".format(self.name, self.topic))
 
-        self.coords_in = dict(x=0.0, y=0.0)
-        self._graphics_drawn = False
-
+        self.currentCoordinates = None
+        self.graphicsScene = graphicsScene
+        self.locationCircle = None
         # Subscribe
-        self.sub = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
-
-        self.count = 15 # Debug
-
-        self.RBT_DIAM = 30  # Robot graphical size in pixels
+        self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
 
     def callback(self, msg):
-        """ Called when new message arrives in /odom """
-        previous_coords = self.coords_in.copy()
+        """ Called when new message arrives in this robots /odom topic """
+        self.currentCoordinates = Pose2D()
+        self.currentCoordinates.x = msg.pose.pose.position.x
+        self.currentCoordinates.y = msg.pose.pose.position.y
 
-        precision = 2
-        self.coords_in['x'] = round( msg.pose.pose.position.x, precision )
-        self.coords_in['y'] = round( msg.pose.pose.position.y, precision )
-
-        # print "prev coords: " + str(previous_coords) + ", coords in: " + str(self.coords_in)
-
-        if self.coords_in == previous_coords:
+    def drawOnScene(self):
+        if self.currentCoordinates is None:
             return
+
+        drawCoords = transformation.world_to_scene(self.currentCoordinates.x, self.currentCoordinates.y)
+        if self.locationCircle is None:
+            self.locationCircle = self.graphicsScene.addEllipse(0, 0, Robot.ROBOT_DIAMETER_PIXELS,
+                                                                Robot.ROBOT_DIAMETER_PIXELS, QPen(Qt.black),
+                                                                QBrush(Qt.red))
+            self.locationCircle.setPos(drawCoords.get("x"), drawCoords.get("y"))
         else:
-            self.update_ui()
-
-    def update_ui(self):
-        scene_coords = transformation.world_to_scene(self.coords_in.get('x'), self.coords_in.get('y'))
-
-        if not self._graphics_drawn:
-            self.circle_draw.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
-            self._graphics_drawn = True
-        else:
-
-            self.circle_update.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
-
+            self.locationCircle.setPos(drawCoords.get("x"), drawCoords.get("y"))
 
     def __del__(self):
-        # Unsub when destroyedw
+        # Unsub when destroyed
         self.sub.unregister()

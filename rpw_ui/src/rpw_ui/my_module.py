@@ -75,24 +75,23 @@ class MyPlugin(Plugin):
             rospy.loginfo("Robot parameters: " + str(params))
             # Init gui robots
             for robot_id in params:
-                self.robots.append( Robot(robot_id) )
+                self.robots.append( Robot(robot_id, self.scene) )
 
-            # Connect graphics signals
-            for robot in self.robots:
-                robot.circle_draw.connect(self.draw_circle)
-                robot.circle_update.connect(self.update_circle)
 
         # Coordinate graphics
         self.scene.addEllipse(498, 498, 4, 4, QPen(Qt.blue), QBrush(Qt.blue))
         self.scene.addLine(500, 500, 1000, 500, QPen(Qt.red))
         self.scene.addLine(500, 500, 500, 0, QPen(Qt.green))
 
+        self.graphics_timer = QTimer()
+        self.graphics_timer.timeout.connect(self.drawRobots)
+        self.graphics_timer.start(15)
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
             rospy.loginfo("Stopping publishing to /target_region")
             self.timer.stop()
-            self._widget.start_button.setText("asd")
+            self._widget.start_button.setText("Start")
         else:
             rospy.loginfo("Starting publishing to /target_region")
             self._widget.start_button.setText("Stop")
@@ -125,18 +124,11 @@ class MyPlugin(Plugin):
 
         self.pub.publish(roi_points)
 
-    @pyqtSlot(int, int, int, int)
-    def draw_circle(self, id, x, y, diam):
-        circle = self.scene.addEllipse(0, 0, diam, diam, QPen(Qt.black), QBrush(Qt.red))
-        circle.setPos(x, y)
-        self.robot_graphics.append( circle )
 
-
-    @pyqtSlot(int, int, int, int)
-    def update_circle(self, id, x, y, diam):
-        circle_to_move = self.robot_graphics[id-1]
-        circle_to_move.setPos(x, y)
-
+    @pyqtSlot()
+    def drawRobots(self):
+        for robot in self.robots:
+            robot.drawOnScene()
 
     def reset_button_clicked(self):
         self.roi.setPos(0,0)
