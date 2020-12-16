@@ -92,7 +92,7 @@ class MyPlugin(Plugin):
         if self._widget.start_button.text() == "Stop":
             rospy.loginfo("Stopping publishing to /target_region")
             self.timer.stop()
-            self._widget.start_button.setText("Start")
+            self._widget.start_button.setText("asd")
         else:
             rospy.loginfo("Starting publishing to /target_region")
             self._widget.start_button.setText("Stop")
