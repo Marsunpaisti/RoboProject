@@ -1,5 +1,5 @@
 
-SCALE_FACTR = 100
+SCALE_FACTR = 50    # 100 = 10 x 10 m; 50 = 20 x 20 m
 SCENE_W = 1000
 SCENE_H = 1000
 
