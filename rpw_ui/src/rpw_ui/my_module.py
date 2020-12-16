@@ -16,9 +16,9 @@ from PyQt5.QtCore import  Qt, QTimer, pyqtSignal, pyqtSlot, QObject
 from PyQt5.QtGui import QBrush, QPen
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
+screenSize = (1000, 1000)  # Screen widht px, Screen height px
 
 class MyPlugin(Plugin):
-
     def __init__(self, context):
         super(MyPlugin, self).__init__(context)
         # Give QObjects reasonable names
@@ -37,17 +37,22 @@ class MyPlugin(Plugin):
         # Add .ui file's widget to the user interface
         context.add_widget(self._widget)
 
-        # Add scene, view,
-        self.scene = QGraphicsScene(0,0,998,998) # setSceneRect as parameter
+        # Add scene, view
+        self.scene = QGraphicsScene(0, 0, screenSize[0] - 2, screenSize[1] - 2) # setSceneRect as parameter
         # ROI rectangle
         self.roi_widht = 200
         self.roi_height = 200
         self.roi = self.scene.addRect(0, 0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
+
         # Setup view
         view = QGraphicsView(self.scene)
-        view.setGeometry(0,1000,0,1000)
-        view.setFixedSize(1000, 1000)
+        border_left = 0
+        border_right = screenSize[0]
+        border_up = 0
+        border_down = screenSize[1]
+        view.setGeometry(border_left, border_right, border_up, border_down)
+        view.setFixedSize(*screenSize)
         context.add_widget(view)
 
         # Publisher timer and start / stop / reset button
@@ -130,6 +135,7 @@ class MyPlugin(Plugin):
     @pyqtSlot(int, int, int, int)
     def update_circle(self, id, x, y, diam):
         circle_to_move = self.robot_graphics[id+1]
+        print circle_to_move
         circle_to_move.setPos(x, y)
 
     def reset_button_clicked(self):
