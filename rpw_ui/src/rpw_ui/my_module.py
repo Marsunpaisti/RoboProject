@@ -44,6 +44,7 @@ class MyPlugin(Plugin):
         self.roi_height = 200
         self.roi = self.scene.addRect(0, 0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.roi.setPos(400, 400)
 
         # Setup view
         view = QGraphicsView(self.scene)
@@ -79,13 +80,13 @@ class MyPlugin(Plugin):
             # Connect graphics signals
             for robot in self.robots:
                 robot.circle_draw.connect(self.draw_circle)
+                robot.circle_update.connect(self.update_circle)
 
         # Coordinate graphics
         self.scene.addEllipse(498, 498, 4, 4, QPen(Qt.blue), QBrush(Qt.blue))
         self.scene.addLine(500, 500, 1000, 500, QPen(Qt.red))
         self.scene.addLine(500, 500, 500, 0, QPen(Qt.green))
 
-        self.roi.setPos(400,400)
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -126,13 +127,16 @@ class MyPlugin(Plugin):
 
     @pyqtSlot(int, int, int, int)
     def draw_circle(self, id, x, y, diam):
-        self.robot_graphics.append( self.scene.addEllipse(x, y, diam, diam, QPen(Qt.black), QBrush(Qt.red)) )
+        circle = self.scene.addEllipse(0, 0, diam, diam, QPen(Qt.black), QBrush(Qt.red))
+        circle.setPos(x, y)
+        self.robot_graphics.append( circle )
+
 
     @pyqtSlot(int, int, int, int)
     def update_circle(self, id, x, y, diam):
-        circle_to_move = self.robot_graphics[id+1]
-        print circle_to_move
+        circle_to_move = self.robot_graphics[id-1]
         circle_to_move.setPos(x, y)
+
 
     def reset_button_clicked(self):
         self.roi.setPos(0,0)

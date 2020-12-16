@@ -40,7 +40,6 @@ class Robot(QObject):
         if self.coords_in == previous_coords:
             return
         else:
-            print "update triggerred"
             self.update_ui()
 
     def update_ui(self):
@@ -50,6 +49,7 @@ class Robot(QObject):
             self.circle_draw.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
             self._graphics_drawn = True
         else:
+
             self.circle_update.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
 
 
