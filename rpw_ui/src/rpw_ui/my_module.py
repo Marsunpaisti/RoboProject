@@ -77,8 +77,8 @@ class MyPlugin(Plugin):
 
         # Coordinate graphics
         self.scene.addEllipse(498, 498, 4, 4, QPen(Qt.blue), QBrush(Qt.blue))
-        self.scene.addLine(500, 500, 1000, 500, QPen(Qt.green))
-        self.scene.addLine(500, 500, 500, 0, QPen(Qt.red))
+        self.scene.addLine(500, 500, 1000, 500, QPen(Qt.red))
+        self.scene.addLine(500, 500, 500, 0, QPen(Qt.green))
 
         self.roi.setPos(400,400)
 
