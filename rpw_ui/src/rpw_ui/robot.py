@@ -29,19 +29,18 @@ class Robot(QObject):
 
     def callback(self, msg):
         """ Called when new message arrives in /odom """
-        # Debug: print few lines only
-        if self.count < 0:
-            return
-        self.count = self.count - 1
-        # /Debug
         previous_coords = self.coords_in.copy()
 
-        self.coords_in['x'] = msg.pose.pose.position.x
-        self.coords_in['y'] = msg.pose.pose.position.y
+        precision = 2
+        self.coords_in['x'] = round( msg.pose.pose.position.x, precision )
+        self.coords_in['y'] = round( msg.pose.pose.position.y, precision )
+
+        # print "prev coords: " + str(previous_coords) + ", coords in: " + str(self.coords_in)
 
         if self.coords_in == previous_coords:
             return
         else:
+            print "update triggerred"
             self.update_ui()
 
     def update_ui(self):
