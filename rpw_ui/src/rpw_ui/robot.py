@@ -22,6 +22,9 @@ class Robot:
         self.rotation = None
         self.graphicsScene = graphicsScene
         self.locationCircle = None
+        self.text = None
+        self.cut_angle = 0
+        self.increasing = True
         # Subscribe
         self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
 
@@ -55,20 +58,40 @@ class Robot:
             self.locationCircle.setPos(drawCoords.get("x"), drawCoords.get("y"))
             #print str(self.rotation)
             self.locationCircle.setRotation(self.rotation)
+
+            self.text.setRotation(-self.rotation)
+
+            self.advanceAngle()
+            cut_angle = self.cut_angle
+            self.locationCircle.setStartAngle(cut_angle)
+            self.locationCircle.setSpanAngle(5760 - 2 * cut_angle)
+
+
     def addItems(self):
         self.locationCircle = self.graphicsScene.addEllipse(0, 0, Robot.ROBOT_DIAM,
                                                             Robot.ROBOT_DIAM, QPen(Qt.black),
                                                             QBrush(Qt.red))
-        cut_angle = 500
-        self.locationCircle.setStartAngle(cut_angle)
-        self.locationCircle.setSpanAngle(5760 - 2 * cut_angle)
+
 
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(10)
         self.locationCircle.setGraphicsEffect(shadow)
 
-        text = self.graphicsScene.addText(str(self.name[4]))
-        text.setParentItem(self.locationCircle)
+        self.text = self.graphicsScene.addText(str(self.name[4]))
+        self.text.setParentItem(self.locationCircle)
+
+    def advanceAngle(self):
+        max_angle, min_angle, step = 500, 0, 20
+
+        if self.cut_angle < max_angle and self.increasing:
+            self.cut_angle += step
+            if self.cut_angle == max_angle:
+                self.increasing = False
+        else:
+            self.cut_angle -= step
+            if self.cut_angle == min_angle and not self.increasing:
+                self.increasing = True
+
 
     def __del__(self):
         # Unsub when destroyed
