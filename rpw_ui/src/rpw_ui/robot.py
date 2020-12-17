@@ -18,9 +18,11 @@ class Robot:
         rospy.loginfo("{} created and listens to topic: {}".format(self.name, self.topic))
 
         self.currentCoordinates = None
+        self.currentTarget = None
         self.rotation = None
         self.graphicsScene = graphicsScene
         self.locationCircle = None
+        self.targetLine = None
         self.text = None
         self.cut_angle = 0
         self.increasing = True
@@ -28,8 +30,11 @@ class Robot:
         self.glowEffect = None
         # Subscribe
         self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
+        self.targetSubscriber = rospy.Subscriber("/{}/controller_target".format(self.name), Pose2D, callback=self.targetCallback)
         self.commandPublisher = rospy.Publisher("/{}/controller_target".format(self.name), Pose2D)
 
+    def targetCallback(self, msg):
+        self.currentTarget = msg
 
     def callback(self, msg):
         """ Called when new message arrives in this robots /odom topic """
@@ -47,6 +52,15 @@ class Robot:
         self.rotation = euler[2]
         self.rotation = math.degrees(self.rotation)
 
+    def drawTargetLine(self):
+        if (self.currentTarget == None):
+            return
+
+        if (self.targetLine == None):
+            self.targetLine = self.graphicsScene.addLine(self.currentCoordinates.x, self.currentCoordinates.y, self.currentTarget.x, self.currentTarget.y, QPen(QColor(255, 0, 255), 0.01))
+        else:
+            self.targetLine.setLine(self.currentCoordinates.x, self.currentCoordinates.y, self.currentTarget.x, self.currentTarget.y)
+
     def drawOnScene(self):
         if self.currentCoordinates is None:
             return
@@ -58,6 +72,8 @@ class Robot:
         self.advanceAngle()
         self.locationCircle.setStartAngle(self.cut_angle)
         self.locationCircle.setSpanAngle(5760 - 2 * self.cut_angle)
+
+        self.drawTargetLine()
 
 
     def addItems(self):
