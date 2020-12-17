@@ -4,10 +4,7 @@ import rospkg
 import re
 from robot import Robot
 import transformation
-
-from geometry_msgs.msg import Polygon, Point32
-
-
+from geometry_msgs.msg import Polygon, Point32, Pose2D
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
@@ -17,6 +14,17 @@ from PyQt5.QtGui import QBrush, QPen, QTransform, QColor, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
 screenSize = (1000, 1000)  # Screen widht px, Screen height px
+
+class ClickableScene(QGraphicsScene):
+    def __init__(self, x, y, w, h):
+        super(ClickableScene, self).__init__(x, y, w, h)
+        self.clickHandler = None
+
+    def mousePressEvent(self, event):
+        super(ClickableScene, self).mousePressEvent(event)
+        clickedItem = self.itemAt(event.scenePos(), QTransform())
+        if (self.clickHandler != None):
+            self.clickHandler(event, clickedItem)
 
 class MyPlugin(Plugin):
     def __init__(self, context):
@@ -38,8 +46,8 @@ class MyPlugin(Plugin):
         context.add_widget(self._widget)
 
         # Add scene, view
-        self.scene = QGraphicsScene(0, 0, screenSize[0] - 2, screenSize[1] - 2) # setSceneRect as parameter
-
+        self.scene = ClickableScene(0, 0, screenSize[0], screenSize[1]) # setSceneRect as parameter
+        self.scene.clickHandler = self.clickHandler
         # Coordinate axes
         self.scene.addLine(0, 0, 100, 0, QPen(Qt.red, 0.01))
         self.scene.addLine(0, 0, 0, 100, QPen(Qt.green, 0.01))
@@ -66,7 +74,6 @@ class MyPlugin(Plugin):
         view.setTransform(viewMatrix)
         view.setSceneRect(-5, -5, 10, 10)
         view.centerOn(0, 0)
-        #view.onClick.connect(self.onClick)
 
         context.add_widget(view)
 
@@ -78,10 +85,11 @@ class MyPlugin(Plugin):
 
 
         # Publisher
-        self.pub = rospy.Publisher('target_region', Polygon , queue_size=10)
+        self.pub = rospy.Publisher('target_region', Polygon , queue_size=1)
 
         # Get robot parameters
         self.robots = []
+        self.selectedRobot = None
         self.robot_graphics = []
         param_str = ""
         try:
@@ -143,12 +151,28 @@ class MyPlugin(Plugin):
         for robot in self.robots:
             robot.drawOnScene()
 
-    @pyqtSlot(float, float)
-    def onClick(self, x, y):
-        rospy.loginfo("Click on X: {} Y: {}".format(x, y))
-
     def reset_button_clicked(self):
         self.roi.setPos(0,0)
+
+    def clickHandler(self, event, clickedItem):
+        # rospy.loginfo("Pressed x {} y {} {}".format(event.scenePos().x(), event.scenePos().y(), clickedItem))
+        if (event.button() == 1):
+            self.selectedRobot = None
+            for robot in self.robots:
+                robot.isSelected = False
+                if (robot.locationCircle == clickedItem):
+                    # rospy.loginfo("Selected robot {}".format(robot.name))
+                    self.selectedRobot = robot
+                    robot.isSelected = True
+        elif (event.button() == 2 and self.selectedRobot != None):
+            rospy.loginfo("Assigned target to robot {}".format(self.selectedRobot.name))
+            targetPose = Pose2D()
+            targetPose.x = event.scenePos().x()
+            targetPose.y = event.scenePos().y()
+            self.selectedRobot.commandPublisher.publish(targetPose)
+            self.selectedRobot.isSelected = False
+            self.selectedRobot = None
+
 
     def shutdown_plugin(self):
         rospy.loginfo("Exiting")

@@ -9,7 +9,6 @@ import math
 import transformation
 from tf.transformations import euler_from_quaternion
 
-
 class Robot:
     ROBOT_DIAM = 0.35 # Robot graphical size in pixels
 
@@ -25,8 +24,11 @@ class Robot:
         self.text = None
         self.cut_angle = 0
         self.increasing = True
+        self.isSelected = False
+        self.glowEffect = None
         # Subscribe
         self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
+        self.commandPublisher = rospy.Publisher("/{}/controller_target".format(self.name), Pose2D)
 
 
     def callback(self, msg):
@@ -42,16 +44,15 @@ class Robot:
             msg.pose.pose.orientation.w)
 
         euler = euler_from_quaternion(quaternion, axes='sxyz')
-        self.rotation = - euler[2]
+        self.rotation = euler[2]
         self.rotation = math.degrees(self.rotation)
 
     def drawOnScene(self):
         if self.currentCoordinates is None:
             return
-
-        drawCoords = transformation.world_to_scene(self.currentCoordinates.x, self.currentCoordinates.y)
         if self.locationCircle is None:
             self.addItems()
+        self.glowEffect.setEnabled(self.isSelected)
         self.locationCircle.setPos(self.currentCoordinates.x, self.currentCoordinates.y)
         self.locationCircle.setRotation(self.rotation)
         self.advanceAngle()
@@ -63,15 +64,11 @@ class Robot:
         self.locationCircle = self.graphicsScene.addEllipse(-(Robot.ROBOT_DIAM/2.0), -(Robot.ROBOT_DIAM/2.0), Robot.ROBOT_DIAM,
                                                             Robot.ROBOT_DIAM, QPen(Qt.black, 0.01),
                                                             QBrush(Qt.red))
-
-        centerCircle = self.graphicsScene.addEllipse(-0.05, -0.05, 0.10, 0.10, QPen(Qt.black, 0.01), QBrush(Qt.green))
-        centerCircle.setParentItem(self.locationCircle)
-
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(15)
-        shadow.setOffset(0, 0)
-        shadow.setColor(QColor(0, 0, 255))
-        self.locationCircle.setGraphicsEffect(shadow)
+        self.glowEffect = QGraphicsDropShadowEffect()
+        self.glowEffect.setBlurRadius(15)
+        self.glowEffect.setOffset(0, 0)
+        self.glowEffect.setColor(QColor(0, 0, 255))
+        self.locationCircle.setGraphicsEffect(self.glowEffect)
         #font = QFont()
         #font.setPixelSize(0.12)
         #self.text = self.graphicsScene.addText(str(self.name), font)
@@ -92,4 +89,5 @@ class Robot:
 
     def __del__(self):
         # Unsub when destroyed
-        self.sub.unregister()
+        self.positionSubscriber.unregister()
+        self.commandPublisher.unregister()
