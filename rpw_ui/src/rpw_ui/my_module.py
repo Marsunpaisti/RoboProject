@@ -13,7 +13,7 @@ from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
 from PyQt5 import Qt, QtGui
 from PyQt5.QtCore import  Qt, QTimer, pyqtSignal, pyqtSlot, QObject
-from PyQt5.QtGui import QBrush, QPen
+from PyQt5.QtGui import QBrush, QPen, QTransform, QColor, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
 screenSize = (1000, 1000)  # Screen widht px, Screen height px
@@ -39,12 +39,17 @@ class MyPlugin(Plugin):
 
         # Add scene, view
         self.scene = QGraphicsScene(0, 0, screenSize[0] - 2, screenSize[1] - 2) # setSceneRect as parameter
+
+        # Coordinate axes
+        self.scene.addLine(0, 0, 100, 0, QPen(Qt.red, 0.01))
+        self.scene.addLine(0, 0, 0, 100, QPen(Qt.green, 0.01))
+
         # ROI rectangle
-        self.roi_widht = 200
-        self.roi_height = 200
-        self.roi = self.scene.addRect(0, 0,self.roi_widht, self.roi_height, QPen(Qt.black), QBrush(Qt.gray))
+        self.roi_widht = 3
+        self.roi_height = 3
+        self.roi = self.scene.addRect(0, 0,self.roi_widht, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.roi.setPos(400, 400)
+        self.roi.setPos(-self.roi_widht/2.0, -self.roi_height/2.0)
 
         # Setup view
         view = QGraphicsView(self.scene)
@@ -54,7 +59,20 @@ class MyPlugin(Plugin):
         border_down = screenSize[1]
         view.setGeometry(border_left, border_right, border_up, border_down)
         view.setFixedSize(*screenSize)
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        viewMatrix = QTransform()
+        viewMatrix.scale(50, -50)
+        view.setTransform(viewMatrix)
+        view.setSceneRect(-5, -5, 10, 10)
+        view.centerOn(0, 0)
         context.add_widget(view)
+
+        rospy.loginfo("View W: {} H: {}".format(view.geometry().width(), view.geometry().height()))
+        font = QFont()
+        font.setPointSizeF(0.2)
+        self.scene.addText("Test", font)
 
         # Publisher timer and start / stop / reset button
         self.timer = QTimer()
@@ -69,19 +87,18 @@ class MyPlugin(Plugin):
         # Get robot parameters
         self.robots = []
         self.robot_graphics = []
-        if rospy.has_param('robot_names_set'):
+        param_str = ""
+        try:
             param_str = rospy.get_param('robot_names_set')
-            params = param_str.split()
-            rospy.loginfo("Robot parameters: " + str(params))
-            # Init gui robots
-            for robot_id in params:
-                self.robots.append( Robot(robot_id, self.scene) )
+        except:
+            rospy.loginfo("Robot names unavailable, defaulting to robo1 robo2 robo3")
+            param_str = "robo1 robo2 robo3"
 
-
-        # Coordinate graphics
-        self.scene.addEllipse(498, 498, 4, 4, QPen(Qt.blue), QBrush(Qt.blue))
-        self.scene.addLine(500, 500, 1000, 500, QPen(Qt.red))
-        self.scene.addLine(500, 500, 500, 0, QPen(Qt.green))
+        params = param_str.split()
+        rospy.loginfo("Robot parameters: " + str(params))
+        # Init gui robots
+        for robot_id in params:
+            self.robots.append( Robot(robot_id, self.scene) )
 
         self.graphics_timer = QTimer()
         self.graphics_timer.timeout.connect(self.drawRobots)
@@ -113,14 +130,14 @@ class MyPlugin(Plugin):
         x_right = x + self.roi_widht
         y_down = y + self.roi_height
 
-        coords = [transformation.scene_to_world(x_left, y_up),
-                  transformation.scene_to_world(x_right, y_up),
-                  transformation.scene_to_world(x_right, y_down),
-                  transformation.scene_to_world(x_left, y_down)]
+        coords = [(x_left, y_up),
+                  (x_right, y_up),
+                  (x_right, y_down),
+                  (x_left, y_down)]
 
         z = 0.0
         for i in range(len(coords)):
-            roi_points.points.append(Point32( coords[i].get('x'), coords[i].get('y'), z ))
+            roi_points.points.append(Point32(coords[i][0], coords[i][1], z ))
 
         self.pub.publish(roi_points)
 

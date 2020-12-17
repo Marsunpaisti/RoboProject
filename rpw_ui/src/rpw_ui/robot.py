@@ -1,7 +1,7 @@
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose2D, Quaternion
-from PyQt5.QtGui import QBrush, QPen
+from PyQt5.QtGui import QBrush, QPen, QColor, QFont
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 import math
@@ -11,7 +11,7 @@ from tf.transformations import euler_from_quaternion
 
 
 class Robot:
-    ROBOT_DIAM = 30  # Robot graphical size in pixels
+    ROBOT_DIAM = 0.35 # Robot graphical size in pixels
 
     def __init__(self, name, graphicsScene):
         self.name = name
@@ -52,33 +52,30 @@ class Robot:
         drawCoords = transformation.world_to_scene(self.currentCoordinates.x, self.currentCoordinates.y)
         if self.locationCircle is None:
             self.addItems()
-            self.locationCircle.setPos(drawCoords.get("x"), drawCoords.get("y"))
-        else:
-
-            self.locationCircle.setPos(drawCoords.get("x"), drawCoords.get("y"))
-            #print str(self.rotation)
-            self.locationCircle.setRotation(self.rotation)
-
-            self.text.setRotation(-self.rotation)
-
-            self.advanceAngle()
-            cut_angle = self.cut_angle
-            self.locationCircle.setStartAngle(cut_angle)
-            self.locationCircle.setSpanAngle(5760 - 2 * cut_angle)
+        self.locationCircle.setPos(self.currentCoordinates.x, self.currentCoordinates.y)
+        self.locationCircle.setRotation(self.rotation)
+        self.advanceAngle()
+        self.locationCircle.setStartAngle(self.cut_angle)
+        self.locationCircle.setSpanAngle(5760 - 2 * self.cut_angle)
 
 
     def addItems(self):
-        self.locationCircle = self.graphicsScene.addEllipse(0, 0, Robot.ROBOT_DIAM,
-                                                            Robot.ROBOT_DIAM, QPen(Qt.black),
+        self.locationCircle = self.graphicsScene.addEllipse(-(Robot.ROBOT_DIAM/2.0), -(Robot.ROBOT_DIAM/2.0), Robot.ROBOT_DIAM,
+                                                            Robot.ROBOT_DIAM, QPen(Qt.black, 0.01),
                                                             QBrush(Qt.red))
 
+        centerCircle = self.graphicsScene.addEllipse(-0.05, -0.05, 0.10, 0.10, QPen(Qt.black, 0.01), QBrush(Qt.green))
+        centerCircle.setParentItem(self.locationCircle)
 
         shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(10)
+        shadow.setBlurRadius(15)
+        shadow.setOffset(0, 0)
+        shadow.setColor(QColor(0, 0, 255))
         self.locationCircle.setGraphicsEffect(shadow)
-
-        self.text = self.graphicsScene.addText(str(self.name[4]))
-        self.text.setParentItem(self.locationCircle)
+        #font = QFont()
+        #font.setPixelSize(0.12)
+        #self.text = self.graphicsScene.addText(str(self.name), font)
+        #self.text.setParentItem(self.locationCircle)
 
     def advanceAngle(self):
         max_angle, min_angle, step = 500, 0, 20
