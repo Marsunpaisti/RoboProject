@@ -61,18 +61,14 @@ class MyPlugin(Plugin):
         view.setFixedSize(*screenSize)
         view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        
         viewMatrix = QTransform()
-        viewMatrix.scale(50, -50)
+        viewMatrix.scale(100, -100)
         view.setTransform(viewMatrix)
         view.setSceneRect(-5, -5, 10, 10)
         view.centerOn(0, 0)
-        context.add_widget(view)
+        #view.onClick.connect(self.onClick)
 
-        rospy.loginfo("View W: {} H: {}".format(view.geometry().width(), view.geometry().height()))
-        font = QFont()
-        font.setPointSizeF(0.2)
-        self.scene.addText("Test", font)
+        context.add_widget(view)
 
         # Publisher timer and start / stop / reset button
         self.timer = QTimer()
@@ -146,6 +142,10 @@ class MyPlugin(Plugin):
     def drawRobots(self):
         for robot in self.robots:
             robot.drawOnScene()
+
+    @pyqtSlot(float, float)
+    def onClick(self, x, y):
+        rospy.loginfo("Click on X: {} Y: {}".format(x, y))
 
     def reset_button_clicked(self):
         self.roi.setPos(0,0)
