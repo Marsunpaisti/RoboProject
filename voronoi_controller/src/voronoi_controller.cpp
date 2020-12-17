@@ -108,6 +108,10 @@ void Controller::loop()
 
     if (distanceToTarget > 0.035 && enableDistControl) { // Only run angle controller if we are roughly facing target
         linearSteer = distanceController.calculate(0, distanceToTarget);
+        // Scale up throttle linearly when angle difference towards target is reduced
+        // When angle goes from 15deg -> 0deg throttle multiplier goes from 0 -> 100%
+        double throttleCorrectionMultiplier = (0.26179916666 - fabs(angleDifference)) / 0.26179916666;
+        linearSteer = linearSteer * throttleCorrectionMultiplier;
     }
 
     /*
@@ -186,7 +190,6 @@ int main(int argc, char** argv)
         boost::shared_ptr<Controller> robotController(new Controller(robotName));
         controllers.push_back(robotController);
     }
-    //ROS_INFO("%s",std::to_string(robotNamesSplit.size()).c_str());
 
     // Main loop
     while (ros::ok()) {
