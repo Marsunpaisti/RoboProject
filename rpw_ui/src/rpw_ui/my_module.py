@@ -4,7 +4,7 @@ import rospkg
 import re
 from robot import Robot
 import transformation
-from geometry_msgs.msg import Polygon, Point32, Pose2D
+from geometry_msgs.msg import Polygon, Point, Pose2D
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtWidgets import QWidget
@@ -53,11 +53,11 @@ class MyPlugin(Plugin):
         self.scene.addLine(0, 0, 0, 100, QPen(Qt.green, 0.01))
 
         # ROI rectangle
-        self.roi_widht = 3
+        self.roi_width = 3
         self.roi_height = 3
-        self.roi = self.scene.addRect(0, 0,self.roi_widht, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
+        self.roi = self.scene.addRect(0, 0,self.roi_width, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.roi.setPos(-self.roi_widht/2.0, -self.roi_height/2.0)
+        self.roi.setPos(-self.roi_width/2.0, -self.roi_height/2.0)
 
         # Setup view
         view = QGraphicsView(self.scene)
@@ -131,7 +131,7 @@ class MyPlugin(Plugin):
         roi_points = Polygon()
         x_left = x
         y_up = y
-        x_right = x + self.roi_widht
+        x_right = x + self.roi_width
         y_down = y + self.roi_height
 
         coords = [(x_left, y_up),
@@ -140,8 +140,8 @@ class MyPlugin(Plugin):
                   (x_left, y_down)]
 
         z = 0.0
-        for i in range(len(coords)):
-            roi_points.points.append(Point32(coords[i][0], coords[i][1], z ))
+        for coord in coords:
+            roi_points.points.append(Point(coord[0], coord[1], z ))
 
         self.pub.publish(roi_points)
 
