@@ -15,16 +15,24 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphics
 
 screenSize = (1000, 1000)  # Screen widht px, Screen height px
 
-class ClickableScene(QGraphicsScene):
+class InteractableScene(QGraphicsScene):
     def __init__(self, x, y, w, h):
-        super(ClickableScene, self).__init__(x, y, w, h)
+        super(InteractableScene, self).__init__(x, y, w, h)
         self.clickHandler = None
+        self.keyPressHandler = None
 
     def mousePressEvent(self, event):
-        super(ClickableScene, self).mousePressEvent(event)
+        super(InteractableScene, self).mousePressEvent(event)
         clickedItem = self.itemAt(event.scenePos(), QTransform())
         if (self.clickHandler != None):
             self.clickHandler(event, clickedItem)
+
+    def keyPressEvent(self, event):
+        super(InteractableScene, self).keyPressEvent(event)
+        #rospy.loginfo("Keypress: {}".format(event.key()))
+        if (self.keyPressHandler != None):
+            self.keyPressHandler(event)
+        
 
 class MyPlugin(Plugin):
     def __init__(self, context):
@@ -46,8 +54,9 @@ class MyPlugin(Plugin):
         context.add_widget(self._widget)
 
         # Add scene, view
-        self.scene = ClickableScene(0, 0, screenSize[0], screenSize[1]) # setSceneRect as parameter
+        self.scene = InteractableScene(0, 0, screenSize[0], screenSize[1]) # setSceneRect as parameter
         self.scene.clickHandler = self.clickHandler
+        self.scene.keyPressHandler = self.keyPressHandler
         # Coordinate axes
         self.scene.addLine(0, 0, 100, 0, QPen(Qt.red, 0.01))
         self.scene.addLine(0, 0, 0, 100, QPen(Qt.green, 0.01))
@@ -55,9 +64,8 @@ class MyPlugin(Plugin):
         # ROI rectangle
         self.roi_width = 3
         self.roi_height = 3
-        self.roi = self.scene.addRect(0, 0,self.roi_width, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
+        self.roi = self.scene.addRect(-self.roi_width/2.0, -self.roi_height/2.0 ,self.roi_width, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.roi.setPos(-self.roi_width/2.0, -self.roi_height/2.0)
 
         # Setup view
         view = QGraphicsView(self.scene)
@@ -72,7 +80,7 @@ class MyPlugin(Plugin):
         viewMatrix = QTransform()
         viewMatrix.scale(100, -100)
         view.setTransform(viewMatrix)
-        view.setSceneRect(-5, -5, 10, 10)
+        view.setSceneRect(-4.9, -4.9, 9.8, 9.8)
         view.centerOn(0, 0)
 
         context.add_widget(view)
@@ -119,20 +127,33 @@ class MyPlugin(Plugin):
             interval = self._widget.interval_spinbox.value()
             self.timer.start(interval)
 
+    def keyPressHandler(self, event):
+        x = self.roi.pos().x()
+        y = self.roi.pos().y()
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
+        if (event.key() == Qt.Key_Up):
+            self.roi.setRect(-width/2.0, -height/2.0, width + 0.1, height + 0.1)
+        elif (event.key() == Qt.Key_Down):
+            self.roi.setRect(-width/2.0, -height/2.0, width - 0.1, height - 0.1)
+
+
     def update_roi_position(self):
         # Get widget's position
         x = float(self.roi.pos().x())
         y = float(self.roi.pos().y())
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
         # Update GUI's position indicator
         str_pos = str(x) + ", " + str(y)
         self._widget.position_edit.setText(str_pos)
 
         # Calculate ROI corner points
         roi_points = Polygon()
-        x_left = x
-        y_up = y
-        x_right = x + self.roi_width
-        y_down = y + self.roi_height
+        x_left = x - width/2.0
+        y_up = y - width/2.0
+        x_right = x + width/2.0
+        y_down = y + height/2.0
 
         coords = [(x_left, y_up),
                   (x_right, y_up),
@@ -145,7 +166,6 @@ class MyPlugin(Plugin):
 
         self.pub.publish(roi_points)
 
-
     @pyqtSlot()
     def drawRobots(self):
         for robot in self.robots:
@@ -155,7 +175,7 @@ class MyPlugin(Plugin):
         self.roi.setPos(0,0)
 
     def clickHandler(self, event, clickedItem):
-        # rospy.loginfo("Pressed x {} y {} {}".format(event.scenePos().x(), event.scenePos().y(), clickedItem))
+        rospy.loginfo("Pressed x {} y {} {}".format(event.scenePos().x(), event.scenePos().y(), clickedItem))
         if (event.button() == 1):
             self.selectedRobot = None
             for robot in self.robots:
