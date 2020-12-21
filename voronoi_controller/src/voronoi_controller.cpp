@@ -150,7 +150,7 @@ Controller::Controller(std::string robotName)
     : robotName(robotName)
 {
     ros::NodeHandle nh;
-    inputTargetSubscriber = nh.subscribe(robotName + "/controller_target", 0,
+    inputTargetSubscriber = nh.subscribe(robotName + "/controller_target", 1,
         &Controller::inputTargetCb, this);
     odometrySubscriber = nh.subscribe(robotName + "/odom", 0, &Controller::inputOdometryCb, this);
     outputPublisher = nh.advertise<geometry_msgs::Twist>(robotName + "/cmd_vel", 0);

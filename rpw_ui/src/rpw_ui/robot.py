@@ -29,9 +29,9 @@ class Robot:
         self.isSelected = False
         self.glowEffect = None
         # Subscribe
-        self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
+        self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback, queue_size=1)
         self.targetSubscriber = rospy.Subscriber("/{}/controller_target".format(self.name), Pose2D, callback=self.targetCallback)
-        self.commandPublisher = rospy.Publisher("/{}/controller_target".format(self.name), Pose2D)
+        self.commandPublisher = rospy.Publisher("/{}/controller_target".format(self.name), Pose2D, queue_size=1)
 
     def targetCallback(self, msg):
         self.currentTarget = msg
