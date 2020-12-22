@@ -27,8 +27,8 @@ public:
     Controller(std::string robotName);
     void loop();
     void stop();
-    PIDController angleController = PIDController(1.0 / 50.0, -1.8, 1.8, 1.5, -0.1, 0, true);
-    PIDController distanceController = PIDController(1.0 / 50.0, 0, 0.75, -1, 0.0, 0, false);
+    PIDController angleController = PIDController(1.0 / 50.0, -3, 3, 3, -0.1, 0, true);
+    PIDController distanceController = PIDController(1.0 / 50.0, 0, 0.60, -1, 0.0, 0, false);
     bool enableDistControl = false;
     long test_timer = 0;
     int test_angle_num = 0;
@@ -47,26 +47,20 @@ void Controller::loop()
             ": canceling loop. No odometry received yet");
         return;
     };
-    test_timer += 50;
     /*
-    if (test_timer >= 4000) {
-        test_timer -= 4000;
-        test_angle_num += 1;
-        if (test_angle_num >= 4) {
-            test_angle_num = 0;
-        }
-    }
-    */
+    test_timer += 50;
     if (test_timer > 25000) {
         test_timer -= 25000;
         test_angle_num += 1;
         if (test_angle_num >= 3)
             test_angle_num = 0;
     }
-    /*haveTargetPose = true;
+    haveTargetPose = true;
     targetPose.x = 3;
     targetPose.y = -3 + 3 * test_angle_num;
-    targetPose.theta = -3.14159 + test_angle_num * (3.14159 / 2.0);*/
+    targetPose.theta = 0;
+    */
+
     if (!haveTargetPose) {
         ROS_INFO("%s %s", robotName.c_str(),
             ": canceling loop. No target pose received yet");
@@ -99,7 +93,7 @@ void Controller::loop()
         angleSteer = angleController.calculate(targetPose.theta, currentPose.theta);
     }
 
-    if (fabs(angleDifference) < (0.5 * (3.14159 / 180.0))) {
+    if (fabs(angleDifference) < (1 * (3.14159 / 180.0))) {
         enableDistControl = true;
     }
     if (fabs(angleDifference) > (15 * (3.14159 / 180.0))) {
@@ -108,6 +102,10 @@ void Controller::loop()
 
     if (distanceToTarget > 0.035 && enableDistControl) { // Only run angle controller if we are roughly facing target
         linearSteer = distanceController.calculate(0, distanceToTarget);
+        // Scale up throttle linearly when angle difference towards target is reduced
+        // When angle goes from 15deg -> 0deg throttle multiplier goes from 0 -> 100%
+        double throttleCorrectionMultiplier = (0.26179916666 - fabs(angleDifference)) / 0.26179916666;
+        linearSteer = linearSteer * throttleCorrectionMultiplier;
     }
 
     /*
@@ -152,7 +150,7 @@ Controller::Controller(std::string robotName)
     : robotName(robotName)
 {
     ros::NodeHandle nh;
-    inputTargetSubscriber = nh.subscribe(robotName + "/controller_target", 0,
+    inputTargetSubscriber = nh.subscribe(robotName + "/controller_target", 1,
         &Controller::inputTargetCb, this);
     odometrySubscriber = nh.subscribe(robotName + "/odom", 0, &Controller::inputOdometryCb, this);
     outputPublisher = nh.advertise<geometry_msgs::Twist>(robotName + "/cmd_vel", 0);
@@ -186,7 +184,6 @@ int main(int argc, char** argv)
         boost::shared_ptr<Controller> robotController(new Controller(robotName));
         controllers.push_back(robotController);
     }
-    //ROS_INFO("%s",std::to_string(robotNamesSplit.size()).c_str());
 
     // Main loop
     while (ros::ok()) {

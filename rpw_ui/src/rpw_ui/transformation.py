@@ -1,5 +1,5 @@
 
-SCALE_FACTR = 100
+SCALE_FACTR = 50    # 100 = 10 x 10 m; 50 = 20 x 20 m
 SCENE_W = 1000
 SCENE_H = 1000
 
@@ -36,7 +36,7 @@ def scene_to_world(x, y):
     scene_w_center = SCENE_W / 2 / SCALE_FACTR      # 1000 px / 2 / 100 = 5 m
     scene_h_center = SCENE_H / 2 / SCALE_FACTR
     x = float( x - scene_w_center )                 # 5.65 m - 5 m = 0.65 m
-    y = float( y + scene_h_center )                 # y inverted
+    y = float( -(y - scene_h_center) )                 # y inverted
 
     coords = dict()
     coords["x"] = x
