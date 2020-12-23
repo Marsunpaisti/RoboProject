@@ -1,6 +1,6 @@
 import rospy
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Pose2D, Quaternion
+from geometry_msgs.msg import Pose2D, Quaternion, Polygon
 from PyQt5.QtGui import QBrush, QPen, QColor, QFont
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect
@@ -28,13 +28,19 @@ class Robot:
         self.increasing = True
         self.isSelected = False
         self.glowEffect = None
+        self.currentRegion = None
+        self.regionLines = None
         # Subscribe
+        self.regionSubscriber = rospy.Subscriber("/{}/robot_region".format(self.name), Polygon, callback=self.regionCallback, queue_size=1)
         self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback, queue_size=1)
         self.targetSubscriber = rospy.Subscriber("/{}/controller_target".format(self.name), Pose2D, callback=self.targetCallback)
         self.commandPublisher = rospy.Publisher("/{}/controller_target".format(self.name), Pose2D, queue_size=1)
 
     def targetCallback(self, msg):
         self.currentTarget = msg
+
+    def regionCallback(self, msg):
+        self.currentRegion = msg
 
     def callback(self, msg):
         """ Called when new message arrives in this robots /odom topic """
@@ -61,6 +67,29 @@ class Robot:
         else:
             self.targetLine.setLine(self.currentCoordinates.x, self.currentCoordinates.y, self.currentTarget.x, self.currentTarget.y)
 
+    def drawRegion(self):
+        if (self.currentRegion == None):
+            return
+        if (self.regionLines == None):
+            tmplines = []
+            for i in range(0, len(self.currentRegion.points)-1):
+                tmplines.append(self.graphicsScene.addLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y, QPen(QColor(0, 0, 255), 0.01)))
+            self.regionLines = tmplines
+        else:
+            if (len(self.regionLines)>=len(self.currentRegion.points)-1):
+                for i in range(0, len(self.currentRegion.points)-1):
+                    self.regionLines[i].setLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y)
+                if (len(self.regionLines)>len(self.currentRegion.points)-1):
+                    for i in range(len(self.currentRegion.points)-1, len(self.regionLines)):
+                        self.regionLines[i].setLine(self.currentRegion.points[len(self.currentRegion.points)-1].x, self.currentRegion.points[len(self.currentRegion.points)-1].y, self.currentRegion.points[len(self.currentRegion.points)-2].x, self.currentRegion.points[len(self.currentRegion.points)-2].y)
+            else:
+                for i in range(0, len(self.regionLines)):
+                    self.regionLines[i].setLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y)
+                for i in range(len(self.regionLines), len(self.currentRegion.points)-1):
+                    self.regionLines.append(self.graphicsScene.addLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y, QPen(QColor(0, 0, 255), 0.01)))
+
+
+
     def drawOnScene(self):
         if self.currentCoordinates is None:
             return
@@ -75,6 +104,7 @@ class Robot:
 
         self.drawTargetLine()
 
+        self.drawRegion()
 
     def addItems(self):
         self.locationCircle = self.graphicsScene.addEllipse(-(Robot.ROBOT_DIAM/2.0), -(Robot.ROBOT_DIAM/2.0), Robot.ROBOT_DIAM,
