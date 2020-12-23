@@ -438,32 +438,36 @@ class Voronoicbc {
 public:
     Voronoicbc(const ros::NodeHandle& nh)
     {
-        std::string nodenames;
-        bool retsucceeded = nh.getParam("robot_names_set", nodenames);
-        mnh = nh;
-        nodenameVec = split_string_by_spaces(nodenames);
-        for (size_t i = 0; i < nodenameVec.size(); i++) {
-            robodom_x.push_back(float(i) / 10000);
-            robodom_y.push_back(float(i) / 10000);
-        }
-        for (size_t i = 0; i < nodenameVec.size(); i++) {
-            //robodom_subs.push_back(mnh.subscribe(nodenameVec.at(i)+"/odom", 1,
-            //&boost::bind(Voronoicbc::robNameVecCb, _1, i), this));
-            robodom_subs.push_back(mnh.subscribe(nodenameVec.at(i) + "/odom", 1,
-                &Voronoicbc::robNameVecCb, this));
+      std::string nodenames;
+      bool retsucceeded = nh.getParam("robot_names_set", nodenames);
+      mnh = nh;
+      nodenameVec = split_string_by_spaces(nodenames);
+      for (size_t i = 0; i < nodenameVec.size(); i++) {
+        robodom_x.push_back(float(i) / 10000);
+        robodom_y.push_back(float(i) / 10000);
+      }
+      for (size_t i = 0; i < nodenameVec.size(); i++) {
+        //robodom_subs.push_back(mnh.subscribe(nodenameVec.at(i)+"/odom", 1,
+        //&boost::bind(Voronoicbc::robNameVecCb, _1, i), this));
+        robodom_subs.push_back(mnh.subscribe(nodenameVec.at(i) + "/odom", 1,
+          &Voronoicbc::robNameVecCb, this));
 
-            //robcont_pubs.push_back(mnh.advertise<geometry_msgs::Twist>(
-            robcont_pubs.push_back(mnh.advertise<geometry_msgs::Pose2D>(
-                nodenameVec.at(i) + "/controller_target", 1));
-        }
-        botLX = -1;
-        botLY = -1;
-        topRX = 1;
-        topRY = 1;
-        target_region_x = { -10, -10, 10, 10 };
-        target_region_y = { -10, 10, 10, -10 };
-        targreg_sub = mnh.subscribe("target_region", 1000, &Voronoicbc::robRegVecCb, this);
-        ros::spin();
+        //robcont_pubs.push_back(mnh.advertise<geometry_msgs::Twist>(
+        robcont_pubs.push_back(mnh.advertise<geometry_msgs::Pose2D>(
+          nodenameVec.at(i) + "/controller_target", 1));
+
+        robreg_pubs.push_back(mnh.advertise<geometry_msgs::Polygon>(
+          nodenameVec.at(i) + "/robot_region",1));
+
+      }
+      botLX = -1;
+      botLY = -1;
+      topRX = 1;
+      topRY = 1;
+      target_region_x = { -10, -10, 10, 10 };
+      target_region_y = { -10, 10, 10, -10 };
+      targreg_sub = mnh.subscribe("target_region", 1000, &Voronoicbc::robRegVecCb, this);
+      ros::spin();
     };
 
 private:
@@ -522,35 +526,45 @@ private:
         std::vector<bool> validPoints;
         std::vector<std::vector<float> > unrotatedTargs;
         cullPoints(xmin, xmax, ymin, ymax, unculledPoints, &generatedPoints, &unrotatedTargs, &validPoints);
+        std::vector<std::vector<std::vector<float>>> polygons_out;
         //std::cout << "cullPoints worked" << '\n';
         if (generatedPoints.size() > 1) {
-            std::vector<std::vector<float> > centroids;
-            Vector2 bottomLeftCorner, topRightCorner;
-            bottomLeftCorner.x = xmin;
-            bottomLeftCorner.y = ymin;
-            topRightCorner.x = xmax;
-            topRightCorner.y = ymax;
-            // Write generated points to generatedPoints:
-            VoronoiDiagram diagram = generateRandomDiagram(&generatedPoints,
-                bottomLeftCorner, topRightCorner);
+          for (size_t i = 0; i < posIn.at(0).size(); i++) {
+            polygons_out.push_back(targetAsColVec);
+          }
+          std::vector<std::vector<float> > centroids;
+          Vector2 bottomLeftCorner, topRightCorner;
+          bottomLeftCorner.x = xmin;
+          bottomLeftCorner.y = ymin;
+          topRightCorner.x = xmax;
+          topRightCorner.y = ymax;
+          // Write generated points to generatedPoints:
+          VoronoiDiagram diagram = generateRandomDiagram(&generatedPoints,
+              bottomLeftCorner, topRightCorner);
 
-            std::vector<std::vector<std::vector<float> > > polygons;
-
-            //count the edges:
-            countEdges(diagram);
-            //detect the polygons:
-            detectPolygon(diagram, &polygons);
-            //detect the point centers:
-            findAllCentroids(polygons, &centroids);
-            //write the positions inside the target region to the unrotatedTargs:
-            int currCentroidInd = 0;
-            for (size_t i = 0; i < unrotatedTargs.size(); i++) {
-                if (validPoints.at(i)) {
-                    unrotatedTargs.at(i) = centroids.at(currCentroidInd);
-                    currCentroidInd++;
-                }
-            }
+          //count the edges:
+          countEdges(diagram);
+          //detect the polygons:
+          std::vector<std::vector<std::vector<float>>> polygons;
+          detectPolygon(diagram, &polygons);
+          //detect the point centers:
+          findAllCentroids(polygons, &centroids);
+          //write the positions inside the target region to the unrotatedTargs:
+          int currCentroidInd = 0;
+          //std::cout << "polygons computed" << '\n';
+          //std::cout << "size of polygons: " << polygons.size() << polygons.at(0).size() << polygons.at(0).at(0).size() << '\n';
+          //std::cout << "size of polygons_out: " << polygons_out.size() << polygons_out.at(0).size() << polygons_out.at(0).at(0).size() << '\n';
+          for (size_t i = 0; i < unrotatedTargs.size(); i++) {
+              if (validPoints.at(i)) {
+                //std::cout << "currCentroidInd: " << currCentroidInd << '\n';
+                  unrotatedTargs.at(i) = centroids.at(currCentroidInd);
+                  polygons_out.at(i) = transformTargetLocs(
+                    polygons.at(currCentroidInd), targetAsColVec);
+                  currCentroidInd++;
+              }
+          }
         }
+        //std::cout << "polygons rotated" << '\n';
 
         posOut = transformTargetLocs(unrotatedTargs, targetAsColVec);
         geometry_msgs::Pose2D reply;
@@ -559,6 +573,21 @@ private:
             reply.y = posOut.at(i).at(1);
             robcont_pubs.at(i).publish(reply);
         }
+
+        std::vector<geometry_msgs::Polygon> region_replies;
+        geometry_msgs::Polygon poly;
+        geometry_msgs::Point32 currPoint;
+        for (size_t i = 0; i < polygons_out.size(); i++) {
+          region_replies.push_back(poly);
+          for (size_t j = 0; j < polygons_out.at(i).size(); j++) {
+            std::cout << "size of polygons_out.at(i).at(j): " << polygons_out.at(i).at(j).size() << '\n';
+            currPoint.x = polygons_out.at(i).at(j).at(0);
+            currPoint.y = polygons_out.at(i).at(j).at(1);
+            region_replies.at(i).points.push_back(currPoint);
+          }
+          robreg_pubs.at(i).publish(region_replies.at(i));
+        }
+        std::cout << "polygons published" << '\n';
 
         //reply.x = posOut.at(0);reply.y = posOut.at(1);
         //targloc_pub.publish(reply);
@@ -572,7 +601,7 @@ private:
     float recXcoord = 0, botLX, botLY, topRX, topRY;
     std::vector<float> target_region_x, target_region_y, robodom_x, robodom_y;
     ros::Publisher targloc_pub;
-    std::vector<ros::Publisher> robcont_pubs;
+    std::vector<ros::Publisher> robcont_pubs, robreg_pubs;
     ros::Subscriber targloc_sub, targreg_sub;
     std::vector<ros::Subscriber> robodom_subs;
     ros::NodeHandle mnh;
