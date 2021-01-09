@@ -1,10 +1,12 @@
 #include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Twist.h"
 #include "nav_msgs/Odometry.h"
+#include "obstacle.h"
 #include "pidcontroller.h"
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "vector"
+#include <memory>
 #include <sstream>
 #include <string>
 #include <tf2/LinearMath/Quaternion.h>
@@ -24,14 +26,16 @@ public:
     geometry_msgs::Pose2D currentPose;
     void inputTargetCb(const geometry_msgs::Pose2D::ConstPtr pTargetPose);
     void inputOdometryCb(const nav_msgs::Odometry::ConstPtr pOdometryMsg);
-    Controller(std::string robotName);
+    Controller(std::string robotName, std::vector<std::shared_ptr<Obstacle> >* allObstacles);
     void loop();
     void stop();
     PIDController angleController = PIDController(1.0 / 50.0, -3, 3, 3, -0.1, 0, true);
-    PIDController distanceController = PIDController(1.0 / 50.0, 0, 0.60, -1, 0.0, 0, false);
+    PIDController distanceController = PIDController(1.0 / 50.0, 0, 0.60, -1.5, 0.0, 0, false);
     bool enableDistControl = false;
     long test_timer = 0;
     int test_angle_num = 0;
+    Obstacle robotObstacle;
+    std::vector<std::shared_ptr<Obstacle> >* allObstacles;
 };
 
 void Controller::stop()
@@ -70,24 +74,38 @@ void Controller::loop()
     double dx
         = targetPose.x - currentPose.x;
     double dy = targetPose.y - currentPose.y;
-    double angleToTarget = atan2(dy, dx); // Returns -pi < ang < pi
-    double angleToTargetReverse = atan2(-dy, -dx);
-    double angleDifference = angleToTarget - currentPose.theta;
-    double angleDifferenceReverse = angleToTargetReverse - currentPose.theta;
     double distanceToTarget = sqrt(dx * dx + dy * dy);
+
+    // Calculate smaller vector towards target and apply repulsion forces to it
+    // Then use that as the actual controller target
+    double unitTargetX = dx / distanceToTarget;
+    double unitTargetY = dy / distanceToTarget;
+    double dirVecLen = std::min(distanceToTarget, 0.15);
+    double dirX = unitTargetX * dirVecLen;
+    double dirY = unitTargetY * dirVecLen;
+
+    for (auto pObstacle : *allObstacles) {
+        if (pObstacle.get() != &robotObstacle) { // Ignore repulsive force from self
+            Vector2 repulsion = pObstacle->getRepulsionVectorAtPoint(currentPose.x, currentPose.y, 0.2);
+            if (repulsion.x > 0 || repulsion.y > 0) {
+                ROS_INFO("X: %f  Y: %f repulsion applied", repulsion.x, repulsion.y);
+            }
+            dirX += repulsion.x;
+            dirY += repulsion.y;
+        }
+    }
+
+    double angleToTarget = atan2(dirY, dirX); // Returns -pi < ang < pi
+    double angleDifference = angleToTarget - currentPose.theta;
     if (angleDifference > 3.1415926535) {
         angleDifference -= 3.1415926535 * 2;
     } else if (angleDifference < -3.1415926535) {
         angleDifference += 3.1415926535 * 2;
     }
-    if (angleDifferenceReverse > 3.1415926535) {
-        angleDifferenceReverse -= 3.1415926535 * 2;
-    } else if (angleDifferenceReverse < -3.1415926535) {
-        angleDifferenceReverse += 3.1415926535 * 2;
-    }
+
     double angleSteer = 0;
     double linearSteer = 0;
-    if (distanceToTarget > 0.035) {
+    if (dirVecLen > 0.035) {
         angleSteer = angleController.calculate(angleToTarget, currentPose.theta);
     } else { // Align self to target theta once we are at target location
         angleSteer = angleController.calculate(targetPose.theta, currentPose.theta);
@@ -100,8 +118,8 @@ void Controller::loop()
         enableDistControl = false;
     }
 
-    if (distanceToTarget > 0.035 && enableDistControl) { // Only run angle controller if we are roughly facing target
-        linearSteer = distanceController.calculate(0, distanceToTarget);
+    if (dirVecLen > 0.035 && enableDistControl) { // Only run angle controller if we are roughly facing target
+        linearSteer = distanceController.calculate(0, dirVecLen);
         // Scale up throttle linearly when angle difference towards target is reduced
         // When angle goes from 15deg -> 0deg throttle multiplier goes from 0 -> 100%
         double throttleCorrectionMultiplier = (0.26179916666 - fabs(angleDifference)) / 0.26179916666;
@@ -142,12 +160,16 @@ void Controller::inputOdometryCb(const nav_msgs::Odometry::ConstPtr pOdometryMsg
     currentPose.x = pOdometryMsg->pose.pose.position.x;
     currentPose.y = pOdometryMsg->pose.pose.position.y;
     currentPose.theta = yaw;
+    robotObstacle._x = currentPose.x;
+    robotObstacle._y = currentPose.y;
     haveCurrentPose = true;
     loop();
 }
 
-Controller::Controller(std::string robotName)
+Controller::Controller(std::string robotName, std::vector<std::shared_ptr<Obstacle> >* allObstacles)
     : robotName(robotName)
+    , robotObstacle(0, 0, 0.2)
+    , allObstacles(allObstacles)
 {
     ros::NodeHandle nh;
     inputTargetSubscriber = nh.subscribe(robotName + "/controller_target", 1,
@@ -176,13 +198,16 @@ int main(int argc, char** argv)
     ROS_INFO("%s", "Voronoi controller started");
 
     // Create controller object for all robots given in launchfile
-    std::vector<boost::shared_ptr<Controller> > controllers;
+    std::vector<std::shared_ptr<Obstacle> > allObstacles;
+    std::vector<std::shared_ptr<Controller> > controllers;
     std::string robotNames;
     bool paramSucceeded = nh.getParam("robot_names_set", robotNames);
     std::vector<std::string> robotNamesSplit = split_string_by_spaces(robotNames);
     for (std::string& robotName : robotNamesSplit) {
-        boost::shared_ptr<Controller> robotController(new Controller(robotName));
-        controllers.push_back(robotController);
+        std::shared_ptr<Controller> pRobotController(new Controller(robotName, &allObstacles));
+        std::shared_ptr<Obstacle> pRobotObstacle(&pRobotController->robotObstacle);
+        controllers.push_back(pRobotController);
+        allObstacles.push_back(pRobotObstacle);
     }
 
     // Main loop
