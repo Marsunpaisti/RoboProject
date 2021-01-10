@@ -14,7 +14,7 @@ from PyQt5.QtGui import QBrush, QPen, QTransform, QColor, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
 screenSize = (1000, 1000)  # Screen widht px, Screen height px
-roiStep = 0.1 # Size increment step
+ROI_STEP = 0.1 # ROI size increment step
 
 class InteractableScene(QGraphicsScene):
     def __init__(self, x, y, w, h):
@@ -206,32 +206,32 @@ class MyPlugin(Plugin):
     def increase_roi_size(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
-        self.roi.setRect(-width / 2.0 - roiStep/2, -height / 2.0 - roiStep/2, width + roiStep, height + roiStep)
+        self.roi.setRect(-width / 2.0 - ROI_STEP/2, -height / 2.0 - ROI_STEP/2, width + ROI_STEP, height + ROI_STEP)
 
     def decrease_roi_size(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
-        self.roi.setRect(-width / 2.0 + roiStep/2, -height / 2.0 + roiStep/2, width - roiStep, height - roiStep)
+        self.roi.setRect(-width / 2.0 + ROI_STEP/2, -height / 2.0 + ROI_STEP/2, width - ROI_STEP, height - ROI_STEP)
 
     def increase_roi_height(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
-        self.roi.setRect(-width / 2.0, -height / 2.0 - roiStep/2, width, height + roiStep)
+        self.roi.setRect(-width / 2.0, -height / 2.0 - ROI_STEP/2, width, height + ROI_STEP)
 
     def decrease_roi_height(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
-        self.roi.setRect(-width / 2.0, -height / 2.0 + roiStep/2, width, height - roiStep)
+        self.roi.setRect(-width / 2.0, -height / 2.0 + ROI_STEP/2, width, height - ROI_STEP)
 
     def increase_roi_width(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
-        self.roi.setRect(-width / 2.0 - roiStep/2, -height / 2.0, width + roiStep, height)
+        self.roi.setRect(-width / 2.0 - ROI_STEP/2, -height / 2.0, width + ROI_STEP, height)
 
     def decrease_roi_width(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
-        self.roi.setRect(-width / 2.0 + roiStep/2, -height / 2.0, width - roiStep, height)
+        self.roi.setRect(-width / 2.0 + ROI_STEP/2, -height / 2.0, width - ROI_STEP, height)
 
 
 
