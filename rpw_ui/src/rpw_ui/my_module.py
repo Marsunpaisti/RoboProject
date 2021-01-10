@@ -135,15 +135,18 @@ class MyPlugin(Plugin):
             self.timer.start(interval)
 
     def keyPressHandler(self, event):
-        width = self.roi.rect().width()
-        height = self.roi.rect().height()
-        if (event.key() == Qt.Key_PageUp):
+        if event.key() == Qt.Key_PageUp:
             self.increase_roi_size()
-            #self.roi.setRect(-width/2.0 - 0.05, -height/2.0 - 0.05, width + 0.1, height + 0.1)
-        elif (event.key() == Qt.Key_PageDown):
+        elif event.key() == Qt.Key_PageDown:
             self.decrease_roi_size()
-            #self.roi.setRect(-width/2.0 + 0.05, -height/2.0 + 0.05, width - 0.1, height - 0.1)
-
+        elif event.key() == Qt.Key_Up:
+            self.increase_roi_height()
+        elif event.key() == Qt.Key_Down:
+            self.decrease_roi_height()
+        elif event.key() == Qt.Key_Left:
+            self.decrease_roi_width()
+        elif event.key() == Qt.Key_Right:
+            self.increase_roi_width()
 
     def update_roi_position(self):
         # Get widget's position
