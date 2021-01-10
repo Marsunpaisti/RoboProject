@@ -133,10 +133,10 @@ class MyPlugin(Plugin):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
         if (event.key() == Qt.Key_Up):
-            self.roi.setRect(-width/2.0, -height/2.0, width + 0.1, height + 0.1)
+            self.roi.setRect(-width/2.0 - 0.05, -height/2.0 - 0.05, width + 0.1, height + 0.1)
             #rospy.loginfo(str(-width/2.0) +" "+ str(-height/2.0) +" "+ str(width + 0.1) +" "+ str(height + 0.1))
         elif (event.key() == Qt.Key_Down):
-            self.roi.setRect(-width/2.0, -height/2.0, width - 0.1, height - 0.1)
+            self.roi.setRect(-width/2.0 + 0.05, -height/2.0 + 0.05, width - 0.1, height - 0.1)
             #rospy.loginfo(str(-width / 2.0) +" "+ str(-height / 2.0) +" "+ str(width - 0.1) +" "+ str(height - 0.1))
 
     def update_roi_position(self):
