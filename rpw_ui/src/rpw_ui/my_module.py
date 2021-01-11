@@ -161,7 +161,7 @@ class MyPlugin(Plugin):
         # Calculate ROI corner points
         roi_points = Polygon()
         x_left = x - width/2.0
-        y_up = y - width/2.0
+        y_up = y - height/2.0
         x_right = x + width/2.0
         y_down = y + height/2.0
 
