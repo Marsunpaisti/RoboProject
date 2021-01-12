@@ -209,5 +209,5 @@ include_directories(
 # catkin_add_nosetests(test)
 
 ##Add voronoictrl
-add_executable(voronoi_controller src/voronoi_controller.cpp src/pidcontroller.h src/pidcontroller.cpp)
+add_executable(voronoi_controller src/voronoi_controller.cpp src/pidcontroller.h src/pidcontroller.cpp src/obstacle.h src/obstacle.cpp) 
 target_link_libraries(voronoi_controller ${catkin_LIBRARIES})

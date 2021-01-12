@@ -14,6 +14,7 @@ from PyQt5.QtGui import QBrush, QPen, QTransform, QColor, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsScene, QGraphicsView, QGraphicsItem, QGraphicsRectItem
 
 screenSize = (1000, 1000)  # Screen widht px, Screen height px
+ROI_STEP = 0.1 # ROI size increment step
 
 class InteractableScene(QGraphicsScene):
     def __init__(self, x, y, w, h):
@@ -85,12 +86,18 @@ class MyPlugin(Plugin):
 
         context.add_widget(view)
 
-        # Publisher timer and start / stop / reset button
+        # Publisher timer and buttons
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_roi_position)
+
         self._widget.start_button.clicked.connect(self.start_button_clicked)
         self._widget.reset_button.clicked.connect(self.reset_button_clicked)
-
+        self._widget.decSizeBtn.clicked.connect(self.decrease_roi_size)
+        self._widget.incSizeBtn.clicked.connect(self.increase_roi_size)
+        self._widget.decHeightBtn.clicked.connect(self.decrease_roi_height)
+        self._widget.incHeightBtn.clicked.connect(self.increase_roi_height)
+        self._widget.decWidthBtn.clicked.connect(self.decrease_roi_width)
+        self._widget.incWidthBtn.clicked.connect(self.increase_roi_width)
 
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=1)
@@ -128,15 +135,18 @@ class MyPlugin(Plugin):
             self.timer.start(interval)
 
     def keyPressHandler(self, event):
-        x = self.roi.pos().x()
-        y = self.roi.pos().y()
-        width = self.roi.rect().width()
-        height = self.roi.rect().height()
-        if (event.key() == Qt.Key_Up):
-            self.roi.setRect(-width/2.0, -height/2.0, width + 0.1, height + 0.1)
-        elif (event.key() == Qt.Key_Down):
-            self.roi.setRect(-width/2.0, -height/2.0, width - 0.1, height - 0.1)
-
+        if event.key() == Qt.Key_PageUp:
+            self.increase_roi_size()
+        elif event.key() == Qt.Key_PageDown:
+            self.decrease_roi_size()
+        elif event.key() == Qt.Key_Up:
+            self.increase_roi_height()
+        elif event.key() == Qt.Key_Down:
+            self.decrease_roi_height()
+        elif event.key() == Qt.Key_Left:
+            self.decrease_roi_width()
+        elif event.key() == Qt.Key_Right:
+            self.increase_roi_width()
 
     def update_roi_position(self):
         # Get widget's position
@@ -151,7 +161,7 @@ class MyPlugin(Plugin):
         # Calculate ROI corner points
         roi_points = Polygon()
         x_left = x - width/2.0
-        y_up = y - width/2.0
+        y_up = y - height/2.0
         x_right = x + width/2.0
         y_down = y + height/2.0
 
@@ -192,6 +202,37 @@ class MyPlugin(Plugin):
             self.selectedRobot.commandPublisher.publish(targetPose)
             self.selectedRobot.isSelected = False
             self.selectedRobot = None
+
+    def increase_roi_size(self):
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
+        self.roi.setRect(-width / 2.0 - ROI_STEP/2, -height / 2.0 - ROI_STEP/2, width + ROI_STEP, height + ROI_STEP)
+
+    def decrease_roi_size(self):
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
+        self.roi.setRect(-width / 2.0 + ROI_STEP/2, -height / 2.0 + ROI_STEP/2, width - ROI_STEP, height - ROI_STEP)
+
+    def increase_roi_height(self):
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
+        self.roi.setRect(-width / 2.0, -height / 2.0 - ROI_STEP/2, width, height + ROI_STEP)
+
+    def decrease_roi_height(self):
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
+        self.roi.setRect(-width / 2.0, -height / 2.0 + ROI_STEP/2, width, height - ROI_STEP)
+
+    def increase_roi_width(self):
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
+        self.roi.setRect(-width / 2.0 - ROI_STEP/2, -height / 2.0, width + ROI_STEP, height)
+
+    def decrease_roi_width(self):
+        width = self.roi.rect().width()
+        height = self.roi.rect().height()
+        self.roi.setRect(-width / 2.0 + ROI_STEP/2, -height / 2.0, width - ROI_STEP, height)
+
 
 
     def shutdown_plugin(self):
