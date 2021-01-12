@@ -170,6 +170,7 @@ class MyPlugin(Plugin):
                   (x_right, y_down),
                   (x_left, y_down)]
 
+        #rospy.loginfo("Sending to topic")
         z = 0.0
         for coord in coords:
             roi_points.points.append(Point(coord[0], coord[1], z ))
