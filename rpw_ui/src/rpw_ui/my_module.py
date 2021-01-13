@@ -223,36 +223,54 @@ class MyPlugin(Plugin):
         height = self.roi.rect().height()
         self.roi.setRect(-width / 2.0 - ROI_STEP/2, -height / 2.0 - ROI_STEP/2, width + ROI_STEP, height + ROI_STEP)
         if self.target_roi:
-            width2 = self.target_roi.rect().width()
-            height2 = self.target_roi.rect().height()
-            self.target_roi.setRect(-width2 / 2.0 - ROI_STEP / 2, -height2 / 2.0 - ROI_STEP / 2, width2 + ROI_STEP,
-                             height2 + ROI_STEP)
+            x = self.target_roi.rect().x()
+            y = self.target_roi.rect().y()
+            self.target_roi.setRect(x - ROI_STEP/2, y - ROI_STEP/2, width + ROI_STEP, height + ROI_STEP)
 
     def decrease_roi_size(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
         self.roi.setRect(-width / 2.0 + ROI_STEP/2, -height / 2.0 + ROI_STEP/2, width - ROI_STEP, height - ROI_STEP)
+        if self.target_roi:
+            x = self.target_roi.rect().x()
+            y = self.target_roi.rect().y()
+            self.target_roi.setRect(x + ROI_STEP/2, y + ROI_STEP/2, width - ROI_STEP, height - ROI_STEP)
 
     def increase_roi_height(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
         self.roi.setRect(-width / 2.0, -height / 2.0 - ROI_STEP/2, width, height + ROI_STEP)
+        if self.target_roi:
+            x = self.target_roi.rect().x()
+            y = self.target_roi.rect().y()
+            self.target_roi.setRect(x, y - ROI_STEP/2, width, height + ROI_STEP)
 
     def decrease_roi_height(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
         self.roi.setRect(-width / 2.0, -height / 2.0 + ROI_STEP/2, width, height - ROI_STEP)
+        if self.target_roi:
+            x = self.target_roi.rect().x()
+            y = self.target_roi.rect().y()
+            self.target_roi.setRect(x, y + ROI_STEP/2, width, height - ROI_STEP)
 
     def increase_roi_width(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
         self.roi.setRect(-width / 2.0 - ROI_STEP/2, -height / 2.0, width + ROI_STEP, height)
+        if self.target_roi:
+            x = self.target_roi.rect().x()
+            y = self.target_roi.rect().y()
+            self.target_roi.setRect(x - ROI_STEP/2, y, width + ROI_STEP, height)
 
     def decrease_roi_width(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
         self.roi.setRect(-width / 2.0 + ROI_STEP/2, -height / 2.0, width - ROI_STEP, height)
-
+        if self.target_roi:
+            x = self.target_roi.rect().x()
+            y = self.target_roi.rect().y()
+            self.target_roi.setRect(x + ROI_STEP/2, y, width - ROI_STEP, height)
 
 
     def shutdown_plugin(self):
