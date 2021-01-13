@@ -67,6 +67,7 @@ class MyPlugin(Plugin):
         self.roi_height = 3
         self.roi = self.scene.addRect(-self.roi_width/2.0, -self.roi_height/2.0 ,self.roi_width, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.target_roi = None
 
         # Setup view
         view = QGraphicsView(self.scene)
@@ -183,6 +184,10 @@ class MyPlugin(Plugin):
 
     def reset_button_clicked(self):
         self.roi.setPos(0,0)
+        self.roi.setRect(0 - self.roi_width / 2.0, 0 - self.roi_height/2.0 , self.roi_width, self.roi_height)
+        if self.target_roi:
+            self.scene.removeItem(self.target_roi)
+            self.target_roi = None
 
     def clickHandler(self, event, clickedItem):
         rospy.loginfo("Pressed x {} y {} {}".format(event.scenePos().x(), event.scenePos().y(), clickedItem))
@@ -202,11 +207,26 @@ class MyPlugin(Plugin):
             self.selectedRobot.commandPublisher.publish(targetPose)
             self.selectedRobot.isSelected = False
             self.selectedRobot = None
+        else:
+            if self.target_roi:
+                self.scene.removeItem(self.target_roi)
+                self.target_roi = None
+            else:
+                self.target_roi = self.scene.addRect(event.scenePos().x() - self.roi_width/2.0, event.scenePos().y()
+                                                 - self.roi_height/2.0 ,self.roi_width, self.roi_height,
+                                                 QPen(Qt.black, 0.01), QBrush(QColor(0, 255, 0, 50)))
+
+
 
     def increase_roi_size(self):
         width = self.roi.rect().width()
         height = self.roi.rect().height()
         self.roi.setRect(-width / 2.0 - ROI_STEP/2, -height / 2.0 - ROI_STEP/2, width + ROI_STEP, height + ROI_STEP)
+        if self.target_roi:
+            width2 = self.target_roi.rect().width()
+            height2 = self.target_roi.rect().height()
+            self.target_roi.setRect(-width2 / 2.0 - ROI_STEP / 2, -height2 / 2.0 - ROI_STEP / 2, width2 + ROI_STEP,
+                             height2 + ROI_STEP)
 
     def decrease_roi_size(self):
         width = self.roi.rect().width()
