@@ -68,6 +68,8 @@ class MyPlugin(Plugin):
         self.roi = self.scene.addRect(-self.roi_width/2.0, -self.roi_height/2.0 ,self.roi_width, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
         self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.target_roi = None
+        self.interpolated_points = None
+        self.new_target = False
 
         # Setup view
         view = QGraphicsView(self.scene)
@@ -99,6 +101,7 @@ class MyPlugin(Plugin):
         self._widget.incHeightBtn.clicked.connect(self.increase_roi_height)
         self._widget.decWidthBtn.clicked.connect(self.decrease_roi_width)
         self._widget.incWidthBtn.clicked.connect(self.increase_roi_width)
+        self._widget.speedSlider.valueChanged.connect(self.speed_change)
 
         # Publisher
         self.pub = rospy.Publisher('target_region', Polygon , queue_size=1)
@@ -134,6 +137,26 @@ class MyPlugin(Plugin):
             self._widget.start_button.setText("Stop")
             interval = self._widget.interval_spinbox.value()
             self.timer.start(interval)
+
+    def speed_change(self):
+        value = self._widget.speedSlider.value()
+
+        sliderMin = 1.0
+        sliderMax = 99.0
+        intervalMin = 150.0
+        intervalMax = 10.0
+        leftSpan = sliderMax - sliderMin
+        rightSpan = intervalMax - intervalMin
+
+        # Convert the left range into a 0-1 range (float)
+        valueScaled = float(value - sliderMin) / float(leftSpan)
+
+        # Convert the 0-1 range into a value in the right range.
+        interval =  intervalMin + (valueScaled * rightSpan)
+
+        print interval
+        self.timer.setInterval(interval)
+
 
     def keyPressHandler(self, event):
         if event.key() == Qt.Key_PageUp:
@@ -182,30 +205,61 @@ class MyPlugin(Plugin):
         self.pub.publish(roi_points)
 
     def update_target_position(self):
-        # Get widget's position
-        x = float(self.target_roi.rect().x())
-        y = float(self.target_roi.rect().y())
-        width = self.target_roi.rect().width()
-        height = self.target_roi.rect().height()
+        if self.new_target:
+            self.calculate_points()
+            self.new_target = False
+            return
 
-        # Calculate ROI corner points
-        roi_points = Polygon()
-        x_left = x
-        y_up = y
-        x_right = x + width
-        y_down = y + height
+        if self.interpolated_points:
 
-        coords = [(x_left, y_up),
-                  (x_right, y_up),
-                  (x_right, y_down),
-                  (x_left, y_down)]
+            points = self.interpolated_points.pop(0)
+            print points
+            x = points[0]
+            y = points[1]
+            width = self.target_roi.rect().width()
+            height = self.target_roi.rect().height()
 
-        z = 0.0
-        for coord in coords:
-            roi_points.points.append(Point(coord[0], coord[1], z ))
+            # Calculate ROI corner points
+            roi_points = Polygon()
+            x_left = x - width / 2.0
+            y_up = y - height / 2.0
+            x_right = x + width / 2.0
+            y_down = y + height / 2.0
 
-        self.pub.publish(roi_points)
+            coords = [(x_left, y_up),
+                      (x_right, y_up),
+                      (x_right, y_down),
+                      (x_left, y_down)]
 
+            z = 0.0
+            for coord in coords:
+                roi_points.points.append(Point(coord[0], coord[1], z ))
+
+            self.pub.publish(roi_points)
+            if len(self.interpolated_points) == 1:
+                self.interpolated_points = None
+
+
+    def calculate_points(self):
+        x1 = float(self.roi.pos().x())
+        y1 = float(self.roi.pos().y())
+        x2 = float(self.target_roi.rect().x() + self.target_roi.rect().width()/2)
+        y2 = float(self.target_roi.rect().y() + self.target_roi.rect().height()/2)
+        #print x1, y1, x2, y2
+        d = 0.01
+        d_full = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
+        s = d / d_full
+
+        self.interpolated_points = []
+        a = s
+        while a < 1:
+            x = (1 - a) * x1 + a * x2
+            y = (1 - a) * y1 + a * y2
+            self.interpolated_points.append((x, y))
+            a += s
+
+        #print "points ", len(self.interpolated_points)
+        #print self.interpolated_points
 
     @pyqtSlot()
     def drawRobots(self):
@@ -242,10 +296,13 @@ class MyPlugin(Plugin):
                 self.scene.removeItem(self.target_roi)
                 self.target_roi = None
             else:
+                width = self.roi.rect().width()
+                height = self.roi.rect().height()
                 self.target_roi = self.scene.addRect(event.scenePos().x() - self.roi_width/2.0, event.scenePos().y()
-                                                 - self.roi_height/2.0 ,self.roi_width, self.roi_height,
+                                                 - self.roi_height/2.0 , width, height,
                                                  QPen(Qt.black, 0.01), QBrush(QColor(0, 255, 0, 50)))
                 #self.target_roi.setFlag(QGraphicsItem.ItemIsMovable, True)
+                self.new_target = True
 
 
     def increase_roi_size(self):
