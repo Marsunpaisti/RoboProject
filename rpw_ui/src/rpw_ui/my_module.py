@@ -150,6 +150,10 @@ class MyPlugin(Plugin):
             self.increase_roi_width()
 
     def update_roi_position(self):
+        if self.target_roi:
+            self.update_target_position()
+            return
+
         # Get widget's position
         x = float(self.roi.pos().x())
         y = float(self.roi.pos().y())
@@ -176,6 +180,32 @@ class MyPlugin(Plugin):
             roi_points.points.append(Point(coord[0], coord[1], z ))
 
         self.pub.publish(roi_points)
+
+    def update_target_position(self):
+        # Get widget's position
+        x = float(self.target_roi.rect().x())
+        y = float(self.target_roi.rect().y())
+        width = self.target_roi.rect().width()
+        height = self.target_roi.rect().height()
+
+        # Calculate ROI corner points
+        roi_points = Polygon()
+        x_left = x
+        y_up = y
+        x_right = x + width
+        y_down = y + height
+
+        coords = [(x_left, y_up),
+                  (x_right, y_up),
+                  (x_right, y_down),
+                  (x_left, y_down)]
+
+        z = 0.0
+        for coord in coords:
+            roi_points.points.append(Point(coord[0], coord[1], z ))
+
+        self.pub.publish(roi_points)
+
 
     @pyqtSlot()
     def drawRobots(self):
@@ -215,7 +245,7 @@ class MyPlugin(Plugin):
                 self.target_roi = self.scene.addRect(event.scenePos().x() - self.roi_width/2.0, event.scenePos().y()
                                                  - self.roi_height/2.0 ,self.roi_width, self.roi_height,
                                                  QPen(Qt.black, 0.01), QBrush(QColor(0, 255, 0, 50)))
-
+                #self.target_roi.setFlag(QGraphicsItem.ItemIsMovable, True)
 
 
     def increase_roi_size(self):
