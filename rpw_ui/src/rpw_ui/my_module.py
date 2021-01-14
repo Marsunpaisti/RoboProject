@@ -58,21 +58,29 @@ class MyPlugin(Plugin):
         self.scene = InteractableScene(0, 0, screenSize[0], screenSize[1]) # setSceneRect as parameter
         self.scene.clickHandler = self.clickHandler
         self.scene.keyPressHandler = self.keyPressHandler
+
+        # Draw grid
+        for i in range (-4,5):
+            self.scene.addLine(i, 5, i, -5, QPen(Qt.gray, 0.01))
+        for i in range(-4, 5):
+            self.scene.addLine(5, i, -5, i, QPen(Qt.gray, 0.01))
         # Coordinate axes
-        self.scene.addLine(0, 0, 100, 0, QPen(Qt.red, 0.01))
-        self.scene.addLine(0, 0, 0, 100, QPen(Qt.green, 0.01))
+        self.scene.addLine(0, 0, 100, 0, QPen(Qt.red, 0.03))
+        self.scene.addLine(0, 0, 0, 100, QPen(Qt.green, 0.03))
+
 
         # ROI rectangle
         self.roi_width = 3
         self.roi_height = 3
         self.roi = self.scene.addRect(-self.roi_width/2.0, -self.roi_height/2.0 ,self.roi_width, self.roi_height, QPen(Qt.black, 0.01), QBrush(QColor(0, 0, 0, 50)))
-        self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
+        #self.roi.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.target_roi = None
         self.interpolated_points = None
         self.new_target = False
 
         # Setup view
         view = QGraphicsView(self.scene)
+        view.setStyleSheet("background-color: lightgray;")
         border_left = 0
         border_right = screenSize[0]
         border_up = 0
@@ -91,7 +99,7 @@ class MyPlugin(Plugin):
 
         # Publisher timer and buttons
         self.timer = QTimer()
-        self.timer.timeout.connect(self.update_roi_position)
+        self.timer.timeout.connect(self.update_target_position)
 
         self._widget.start_button.clicked.connect(self.start_button_clicked)
         self._widget.reset_button.clicked.connect(self.reset_button_clicked)
@@ -126,6 +134,9 @@ class MyPlugin(Plugin):
         self.graphics_timer = QTimer()
         self.graphics_timer.timeout.connect(self.drawRobots)
         self.graphics_timer.start(15)
+        self._widget.speedSlider.setValue(75)
+
+
 
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
@@ -143,7 +154,7 @@ class MyPlugin(Plugin):
 
         sliderMin = 1.0
         sliderMax = 99.0
-        intervalMin = 150.0
+        intervalMin = 300.0
         intervalMax = 10.0
         leftSpan = sliderMax - sliderMin
         rightSpan = intervalMax - intervalMin
@@ -153,8 +164,6 @@ class MyPlugin(Plugin):
 
         # Convert the 0-1 range into a value in the right range.
         interval =  intervalMin + (valueScaled * rightSpan)
-
-        print interval
         self.timer.setInterval(interval)
 
 
@@ -173,9 +182,6 @@ class MyPlugin(Plugin):
             self.increase_roi_width()
 
     def update_roi_position(self):
-        if self.target_roi:
-            self.update_target_position()
-            return
 
         # Get widget's position
         x = float(self.roi.pos().x())
@@ -213,11 +219,15 @@ class MyPlugin(Plugin):
         if self.interpolated_points:
 
             points = self.interpolated_points.pop(0)
-            print points
+
             x = points[0]
             y = points[1]
-            width = self.target_roi.rect().width()
-            height = self.target_roi.rect().height()
+            width = self.roi.rect().width()
+            height = self.roi.rect().height()
+
+            # Move original ROI
+            self.roi.setRect(x - width / 2, y - height / 2, width, height)
+            self.roi.setBrush(QBrush(QColor(0, 0, 255, 50)))
 
             # Calculate ROI corner points
             roi_points = Polygon()
@@ -238,11 +248,12 @@ class MyPlugin(Plugin):
             self.pub.publish(roi_points)
             if len(self.interpolated_points) == 1:
                 self.interpolated_points = None
+                self.roi.setBrush(QBrush(QColor(0, 0, 0, 50)))
 
 
     def calculate_points(self):
-        x1 = float(self.roi.pos().x())
-        y1 = float(self.roi.pos().y())
+        x1 = float(self.roi.rect().x() + self.roi.rect().width()/2)
+        y1 = float(self.roi.rect().y() + self.roi.rect().height()/2)
         x2 = float(self.target_roi.rect().x() + self.target_roi.rect().width()/2)
         y2 = float(self.target_roi.rect().y() + self.target_roi.rect().height()/2)
         #print x1, y1, x2, y2
@@ -269,9 +280,11 @@ class MyPlugin(Plugin):
     def reset_button_clicked(self):
         self.roi.setPos(0,0)
         self.roi.setRect(0 - self.roi_width / 2.0, 0 - self.roi_height/2.0 , self.roi_width, self.roi_height)
+        self.roi.setBrush(QBrush(QColor(0, 0, 0, 50)))
         if self.target_roi:
             self.scene.removeItem(self.target_roi)
             self.target_roi = None
+        self.update_roi_position()
 
     def clickHandler(self, event, clickedItem):
         rospy.loginfo("Pressed x {} y {} {}".format(event.scenePos().x(), event.scenePos().y(), clickedItem))

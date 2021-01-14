@@ -10,7 +10,7 @@ import transformation
 from tf.transformations import euler_from_quaternion
 
 class Robot:
-    ROBOT_DIAM = 0.35 # Robot graphical size in pixels
+    ROBOT_DIAM = 0.25 # Robot graphical size in pixels
 
     def __init__(self, name, graphicsScene):
         self.name = name
