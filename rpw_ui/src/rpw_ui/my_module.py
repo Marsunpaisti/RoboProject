@@ -136,8 +136,6 @@ class MyPlugin(Plugin):
         self.graphics_timer.start(15)
         self._widget.speedSlider.setValue(75)
 
-
-
     def start_button_clicked(self):
         if self._widget.start_button.text() == "Stop":
             rospy.loginfo("Stopping publishing to /target_region")
@@ -148,6 +146,17 @@ class MyPlugin(Plugin):
             self._widget.start_button.setText("Stop")
             interval = self._widget.interval_spinbox.value()
             self.timer.start(interval)
+
+    def reset_button_clicked(self):
+        self.roi.setPos(0,0)
+        self.roi.setRect(0 - self.roi_width / 2.0, 0 - self.roi_height/2.0 , self.roi_width, self.roi_height)
+        self.roi.setBrush(QBrush(QColor(0, 0, 0, 50)))
+        if self.target_roi:
+            self.scene.removeItem(self.target_roi)
+            self.target_roi = None
+            self.interpolated_points = None
+        self.update_roi_position()
+
 
     def speed_change(self):
         value = self._widget.speedSlider.value()
@@ -246,6 +255,12 @@ class MyPlugin(Plugin):
                 roi_points.points.append(Point(coord[0], coord[1], z ))
 
             self.pub.publish(roi_points)
+
+            # Update GUI's position indicator
+            str_pos = str(x) + ", " + str(y)
+            str_pos = "{:.2f}, {:.2f}".format(x, y)
+            self._widget.position_edit.setText(str_pos)
+
             if len(self.interpolated_points) == 1:
                 self.interpolated_points = None
                 self.roi.setBrush(QBrush(QColor(0, 0, 0, 50)))
@@ -276,15 +291,6 @@ class MyPlugin(Plugin):
     def drawRobots(self):
         for robot in self.robots:
             robot.drawOnScene()
-
-    def reset_button_clicked(self):
-        self.roi.setPos(0,0)
-        self.roi.setRect(0 - self.roi_width / 2.0, 0 - self.roi_height/2.0 , self.roi_width, self.roi_height)
-        self.roi.setBrush(QBrush(QColor(0, 0, 0, 50)))
-        if self.target_roi:
-            self.scene.removeItem(self.target_roi)
-            self.target_roi = None
-        self.update_roi_position()
 
     def clickHandler(self, event, clickedItem):
         rospy.loginfo("Pressed x {} y {} {}".format(event.scenePos().x(), event.scenePos().y(), clickedItem))
