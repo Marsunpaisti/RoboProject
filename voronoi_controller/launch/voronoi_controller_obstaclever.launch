@@ -1,0 +1,7 @@
+<launch>
+  <param name="robot_names_set" value = "robo1 robo2 robo3" />
+  <param name = "obst_x_set" value = "-3.65728 -3.65728 -1.65728 -1.65728 -3.65728" />
+  <param name = "obst_y_set" value = "1.42376 3.42376 3.42376 1.42376 1.42376" />
+  <node pkg="voronoi_controller" name="voronoi_controller" type="voronoi_controller" output="screen" >
+  </node>
+</launch>

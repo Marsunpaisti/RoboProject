@@ -577,17 +577,49 @@ private:
         std::vector<geometry_msgs::Polygon> region_replies;
         geometry_msgs::Polygon poly;
         geometry_msgs::Point32 currPoint;
+        float min_x_polygon=1000, min_x_target=1000, max_x_polygon=-1000, max_x_target=-1000,
+          min_y_polygon=1000, min_y_target=1000, max_y_polygon=-1000, max_y_target=-1000;
         for (size_t i = 0; i < polygons_out.size(); i++) {
           region_replies.push_back(poly);
           for (size_t j = 0; j < polygons_out.at(i).size(); j++) {
-            std::cout << "size of polygons_out.at(i).at(j): " << polygons_out.at(i).at(j).size() << '\n';
+            //std::cout << "size of polygons_out.at(i).at(j): " << polygons_out.at(i).at(j).size() << '\n';
             currPoint.x = polygons_out.at(i).at(j).at(0);
             currPoint.y = polygons_out.at(i).at(j).at(1);
+            /*if (currPoint.x<min_x_polygon) {
+              min_x_polygon = currPoint.x;
+            }
+            if (currPoint.x>max_x_polygon) {
+              max_x_polygon = currPoint.x;
+            }
+            if (currPoint.y<min_y_polygon) {
+              min_y_polygon = currPoint.y;
+            }
+            if (currPoint.y>max_y_polygon) {
+              max_y_polygon = currPoint.y;
+            }*/
             region_replies.at(i).points.push_back(currPoint);
           }
           robreg_pubs.at(i).publish(region_replies.at(i));
         }
-        std::cout << "polygons published" << '\n';
+        /*for (size_t i = 0; i < target_region_x.size(); i++) {
+          if (target_region_x.at(i)<min_x_target) {
+            min_x_target = target_region_x.at(i);
+          }
+          if (target_region_x.at(i)>max_x_target) {
+            max_x_target = target_region_x.at(i);
+          }
+          if (target_region_y.at(i)<min_y_target) {
+            min_y_target = target_region_y.at(i);
+          }
+          if (target_region_y.at(i)>max_y_target) {
+            max_y_target = target_region_y.at(i);
+          }
+        }
+        std::cout << "min x difference: " << min_x_polygon-min_x_target << '\n';
+        std::cout << "max x difference: " << max_x_polygon-max_x_target << '\n';
+        std::cout << "min y difference: " << min_y_polygon-min_y_target << '\n';
+        std::cout << "max y difference: " << max_y_polygon-max_y_target << '\n';*/
+        //std::cout << "polygons published" << '\n';
 
         //reply.x = posOut.at(0);reply.y = posOut.at(1);
         //targloc_pub.publish(reply);

@@ -179,6 +179,15 @@ Controller::Controller(std::string robotName, std::vector<std::shared_ptr<Obstac
     ROS_INFO("%s %s", robotName.c_str(), ": controller initialized");
 }
 
+std::vector<float> string_vec_to_float_vec(std::vector<std::string> stringvec)
+{
+  std::vector<float> numvec;
+  for (size_t i = 0; i < stringvec.size(); i++) {
+    numvec.push_back(std::stof(stringvec.at(i)));
+  }
+  return numvec;
+}
+
 std::vector<std::string> split_string_by_spaces(std::string inputstr)
 {
     std::stringstream tmpss(inputstr);
@@ -202,6 +211,41 @@ int main(int argc, char** argv)
     std::vector<std::shared_ptr<Controller> > controllers;
     std::string robotNames;
     bool paramSucceeded = nh.getParam("robot_names_set", robotNames);
+    std::string obstx, obsty;
+    bool xFound = nh.getParam("obst_x_set", obstx);
+    bool yFound = nh.getParam("obst_y_set", obsty);
+    std::cout << "xFound: " << xFound << '\n';
+    std::cout << "yFound: " << yFound << '\n';
+    std::vector<Obstacle> tmpObstVec;
+    if (xFound && yFound) {
+      float currx, nextx, curry, nexty, pdist, xdist, ydist, midx, midy;
+      int pcount;
+      std::vector<float> xvals = string_vec_to_float_vec(split_string_by_spaces(obstx));
+      std::vector<float> yvals = string_vec_to_float_vec(split_string_by_spaces(obsty));
+      std::cout << "length of xvals: " << xvals.size() << '\n';
+      for (size_t i = 0; i < xvals.size()-1; i++) {
+        currx = xvals.at(i);nextx = xvals.at(i+1);
+        curry = yvals.at(i);nexty = yvals.at(i+1);
+        pdist = (currx-nextx)*(currx-nextx)+(curry-nexty)*(curry-nexty);
+        xdist = (currx-nextx);
+        ydist = (curry-nexty);
+        pcount = std::ceil(pdist*10);
+        for (size_t i = 0; i < pcount; i++) {
+          Obstacle currObst((nextx+i*xdist/pcount),(nexty+i*ydist/pcount),0.02);
+          //currObst._x =(nextx-i*xdist/pcount);
+          //currObst._y = (nexty-i*ydist/pcount);
+          tmpObstVec.push_back(currObst);
+          //std::shared_ptr<Obstacle> pObst(new Obstacle);
+          //pObst = &currObst;
+        }
+      }
+      for (size_t i = 0; i < tmpObstVec.size(); i++) {
+        std::shared_ptr<Obstacle> pObst(&tmpObstVec.at(i));
+        allObstacles.push_back(pObst);
+      }
+    }
+    std::cout << "size of allObstacles: " << allObstacles.size() << '\n';
+    //return 0;
     std::vector<std::string> robotNamesSplit = split_string_by_spaces(robotNames);
     for (std::string& robotName : robotNamesSplit) {
         std::shared_ptr<Controller> pRobotController(new Controller(robotName, &allObstacles));

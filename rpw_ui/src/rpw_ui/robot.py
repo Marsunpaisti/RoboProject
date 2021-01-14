@@ -1,7 +1,10 @@
 import rospy
 from nav_msgs.msg import Odometry
-from PyQt5.QtGui import QBrush, QPen
-from PyQt5.QtCore import  Qt, pyqtSignal, pyqtSlot, QObject
+from geometry_msgs.msg import Pose2D, Quaternion, Polygon
+from PyQt5.QtGui import QBrush, QPen, QColor, QFont
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject
+from PyQt5.QtWidgets import QGraphicsDropShadowEffect
+import math
 
 import transformation
 from tf.transformations import euler_from_quaternion
@@ -28,7 +31,10 @@ class Robot:
         self.currentRegion = None
         self.regionLines = None
         # Subscribe
-        self.sub = rospy.Subscriber(self.topic, Odometry, callback=self.callback)
+        self.regionSubscriber = rospy.Subscriber("/{}/robot_region".format(self.name), Polygon, callback=self.regionCallback, queue_size=1)
+        self.positionSubscriber = rospy.Subscriber(self.topic, Odometry, callback=self.callback, queue_size=1)
+        self.targetSubscriber = rospy.Subscriber("/{}/controller_target".format(self.name), Pose2D, callback=self.targetCallback)
+        self.commandPublisher = rospy.Publisher("/{}/controller_target".format(self.name), Pose2D, queue_size=1)
 
     def targetCallback(self, msg):
         self.currentTarget = msg
@@ -37,26 +43,51 @@ class Robot:
         self.currentRegion = msg
 
     def callback(self, msg):
-        """ Called when new message arrives in /odom """
-        # Debug: print few lines only
-        # rospy.loginfo("odom callback")
-        if self.count < 0:
+        """ Called when new message arrives in this robots /odom topic """
+        self.currentCoordinates = Pose2D()
+        self.currentCoordinates.x = msg.pose.pose.position.x
+        self.currentCoordinates.y = msg.pose.pose.position.y
+
+        quaternion = (
+            msg.pose.pose.orientation.x,
+            msg.pose.pose.orientation.y,
+            msg.pose.pose.orientation.z,
+            msg.pose.pose.orientation.w)
+
+        euler = euler_from_quaternion(quaternion, axes='sxyz')
+        self.rotation = euler[2]
+        self.rotation = math.degrees(self.rotation)
+
+    def drawTargetLine(self):
+        if (self.currentTarget == None):
             return
 
-        self.coords_in['x'] = msg.pose.pose.position.x
-        self.coords_in['y'] = msg.pose.pose.position.y
-        self.update_ui()
-        # print str(self.name) + " previous: " + str(previous_coords) + " next: " + str(self.coords_in)
+        if (self.targetLine == None):
+            self.targetLine = self.graphicsScene.addLine(self.currentCoordinates.x, self.currentCoordinates.y, self.currentTarget.x, self.currentTarget.y, QPen(QColor(255, 0, 255), 0.01))
+        else:
+            self.targetLine.setLine(self.currentCoordinates.x, self.currentCoordinates.y, self.currentTarget.x, self.currentTarget.y)
 
+    def drawRegion(self):
+        if (self.currentRegion == None):
+            return
+        if (self.regionLines == None):
+            tmplines = []
+            for i in range(0, len(self.currentRegion.points)-1):
+                tmplines.append(self.graphicsScene.addLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y, QPen(QColor(0, 0, 255), 0.01)))
+            self.regionLines = tmplines
+        else:
+            if (len(self.regionLines)>=len(self.currentRegion.points)-1):
+                for i in range(0, len(self.currentRegion.points)-1):
+                    self.regionLines[i].setLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y)
+                if (len(self.regionLines)>len(self.currentRegion.points)-1):
+                    for i in range(len(self.currentRegion.points)-1, len(self.regionLines)):
+                        self.regionLines[i].setLine(self.currentRegion.points[len(self.currentRegion.points)-1].x, self.currentRegion.points[len(self.currentRegion.points)-1].y, self.currentRegion.points[len(self.currentRegion.points)-2].x, self.currentRegion.points[len(self.currentRegion.points)-2].y)
+            else:
+                for i in range(0, len(self.regionLines)):
+                    self.regionLines[i].setLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y)
+                for i in range(len(self.regionLines), len(self.currentRegion.points)-1):
+                    self.regionLines.append(self.graphicsScene.addLine(self.currentRegion.points[i].x, self.currentRegion.points[i].y, self.currentRegion.points[i+1].x, self.currentRegion.points[i+1].y, QPen(QColor(0, 0, 255), 0.01)))
 
-        #if self.coords_in == previous_coords:
-    #        return
-        #else:
-            #self.update_ui()
-
-    def update_ui(self):
-        scene_coords = transformation.world_to_scene(self.coords_in.get('x'), self.coords_in.get('y'))
-        #self.circle_draw.emit(self.id, scene_coords.get('x'), scene_coords.get('y'), self.RBT_DIAM)
 
 
     def drawOnScene(self):
@@ -103,5 +134,7 @@ class Robot:
 
 
     def __del__(self):
-        # Unsub when destroyedw
-        self.sub.unregister()
+        # Unsub when destroyed
+        self.positionSubscriber.unregister()
+        self.commandPublisher.unregister()
+
